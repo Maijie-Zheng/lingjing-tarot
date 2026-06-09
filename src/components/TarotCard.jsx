@@ -70,15 +70,40 @@ export default function TarotCard({
       `}
     >
       {isFaceUp ? (
-        /* ===== 牌面（后续轮次放真实牌图） ===== */
-        <div className="w-full h-full flex flex-col items-center justify-center gap-2 p-3 text-center"
-          style={{ background: 'linear-gradient(135deg, #1e1050, #1a0a2e)' }}
-        >
-          <span className="text-2xl">🃏</span>
-          <span className="text-sm font-serif text-brand-gold">{card.name}</span>
-          {size !== 'sm' && (
-            <span className="text-xs text-white/50">{card.nameEn}</span>
-          )}
+        /* ===== 牌面：真实韦特塔罗图片 + 中文牌名叠加 ===== */
+        <div className="w-full h-full relative">
+          <img
+            src={card.image}
+            alt={card.name}
+            className="w-full h-full object-cover"
+            loading="lazy"
+          />
+          {/* 牌名渐变叠加层 */}
+          <div
+            className="absolute bottom-0 left-0 right-0 rounded-b-card"
+            style={{
+              background: 'linear-gradient(transparent, rgba(0,0,0,0.85))',
+              paddingTop: size === 'sm' ? 12 : 20,
+              paddingBottom: size === 'sm' ? 3 : 6,
+              paddingLeft: 4,
+              paddingRight: 4,
+            }}
+          >
+            <span
+              className="block text-center font-serif leading-tight text-brand-gold"
+              style={{ fontSize: size === 'sm' ? 10 : 13 }}
+            >
+              {card.name}
+            </span>
+            {size !== 'sm' && (
+              <span
+                className="block text-center leading-tight"
+                style={{ fontSize: 9, color: 'rgba(255,255,255,0.5)' }}
+              >
+                {card.isReversed ? '逆位' : card.nameEn}
+              </span>
+            )}
+          </div>
         </div>
       ) : (
         /* ===== 牌背（深蓝底 + 金色星星几何图案） ===== */
