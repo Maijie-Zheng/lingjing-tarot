@@ -3,10 +3,16 @@ import { Link, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import LoadingSpinner from '../components/LoadingSpinner'
 import ReadingText from '../components/ReadingText'
+import ShareOverlay from '../components/ShareOverlay'
 import { getSystemPrompt, buildUserPrompt } from '../utils/promptBuilder'
 import { callDeepSeek } from '../utils/api'
 import { saveReading } from '../utils/storage'
 import { generateShareCanvas, canvasToDataURL, downloadImage } from '../utils/shareImage'
+
+/** 检测是否微信浏览器 */
+function isWeChat() {
+  return /micromessenger/i.test(navigator.userAgent)
+}
 
 /**
  * 解读结果页
@@ -27,6 +33,7 @@ export default function ReadingPage() {
   const [readingText, setReadingText] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
   const [saved, setSaved] = useState(false)
+  const [shareImage, setShareImage] = useState(null) // 微信分享浮层用
   const hasStartedRef = useRef(false)
   const readingRef = useRef('') // ref 保持最新值，避免闭包问题
 
@@ -76,6 +83,12 @@ export default function ReadingPage() {
     try {
       const canvas = generateShareCanvas({ question, cards, reading: readingRef.current })
       const dataURL = canvasToDataURL(canvas)
+
+      // 微信浏览器 → 显示全屏浮层，用户长按保存
+      if (isWeChat()) {
+        setShareImage(dataURL)
+        return
+      }
 
       // 优先使用 Web Share API（移动端原生分享）
       if (navigator.share && navigator.canShare) {
@@ -199,6 +212,13 @@ export default function ReadingPage() {
           </div>
         </motion.div>
       )}
+
+      {/* 微信分享浮层 */}
+      <ShareOverlay
+        visible={!!shareImage}
+        imageDataURL={shareImage}
+        onClose={() => setShareImage(null)}
+      />
     </div>
   )
 }
