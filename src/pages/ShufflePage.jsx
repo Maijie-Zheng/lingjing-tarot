@@ -64,7 +64,7 @@ export default function ShufflePage() {
       const newCard = {
         ...card,
         position: POSITIONS[prev.length],
-        isReversed: Math.random() < 0.3,
+        isReversed: Math.random() < 0.5,
       }
       // 触发卡槽星点汇聚
       setConvergeSlot(prev.length)

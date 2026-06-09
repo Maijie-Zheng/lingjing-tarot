@@ -15,13 +15,14 @@ function isWeChat() {
 }
 
 /**
- * 解读结果页 —— P0-9 升级
+ * 解读结果页 —— P0-9 + P0-10 升级
  *
  * - 问题卡片磨砂玻璃化（对齐 AskPage/ShufflePage 风格）
  * - Loading 星轨仪式感动画（星轨双环 + 牌面浮现 + 诗意文案）
  * - "重新抽牌"保留问题（修复 bug）
- * - 背景光晕氛围增强
- * - 解读完成后 loading 淡出 → 内容淡入
+ * - 背景光晕 + 漂浮光斑氛围增强
+ * - 卡牌点击放大模态框
+ * - ReadingText P0-10 模块化重写（磨砂容器 + 金色标题 + 引导语）
  */
 export default function ReadingPage() {
   const location = useLocation()
@@ -39,6 +40,7 @@ export default function ReadingPage() {
   const [errorMessage, setErrorMessage] = useState('')
   const [saved, setSaved] = useState(false)
   const [shareImage, setShareImage] = useState(null)
+  const [lightboxCard, setLightboxCard] = useState(null) // 卡牌放大模态框
   const hasStartedRef = useRef(false)
   const readingRef = useRef('')
 
@@ -162,6 +164,44 @@ export default function ReadingPage() {
         transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
       />
 
+      {/* ===== 漂浮光斑（P0-10 新增）===== */}
+      <motion.div
+        className="fixed pointer-events-none rounded-full"
+        style={{
+          width: 300,
+          height: 300,
+          background:
+            'radial-gradient(circle, rgba(201,169,110,0.03) 0%, transparent 60%)',
+          right: '-10%',
+          top: '15%',
+          zIndex: 0,
+        }}
+        animate={{
+          x: [0, -30, 0, 20, 0],
+          y: [0, 20, -15, -25, 0],
+          opacity: [0.6, 1, 0.5, 0.8, 0.6],
+        }}
+        transition={{ duration: 18, repeat: Infinity, ease: 'easeInOut' }}
+      />
+      <motion.div
+        className="fixed pointer-events-none rounded-full"
+        style={{
+          width: 250,
+          height: 250,
+          background:
+            'radial-gradient(circle, rgba(139,92,246,0.03) 0%, transparent 60%)',
+          left: '-8%',
+          top: '55%',
+          zIndex: 0,
+        }}
+        animate={{
+          x: [0, 25, -15, 0],
+          y: [0, -25, 15, 0],
+          opacity: [0.4, 0.8, 0.5, 0.4],
+        }}
+        transition={{ duration: 22, repeat: Infinity, ease: 'easeInOut' }}
+      />
+
       {/* ===== 顶栏 ===== */}
       <div className="flex items-center justify-between relative z-10">
         <button
@@ -234,6 +274,7 @@ export default function ReadingPage() {
                 rawText={readingText}
                 cards={hasValidData ? cards : null}
                 speed={800}
+                onCardClick={setLightboxCard}
               />
             </motion.div>
           )}
@@ -268,6 +309,50 @@ export default function ReadingPage() {
                 🏠 首页
               </Link>
             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ===== 卡牌放大模态框（P0-10 新增）===== */}
+      <AnimatePresence>
+        {lightboxCard && (
+          <motion.div
+            key="card-lightbox"
+            className="fixed inset-0 z-50 flex items-center justify-center"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25 }}
+            onClick={() => setLightboxCard(null)}
+            style={{
+              background: 'rgba(0,0,0,0.6)',
+              backdropFilter: 'blur(4px)',
+              WebkitBackdropFilter: 'blur(4px)',
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.85, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.85, opacity: 0 }}
+              transition={{ duration: 0.3, ease: 'easeOut' }}
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                borderRadius: 16,
+                boxShadow:
+                  '0 0 30px rgba(201,169,110,0.3), 0 0 80px rgba(201,169,110,0.1), 0 0 120px rgba(201,169,110,0.04)',
+              }}
+            >
+              <TarotCard card={lightboxCard} size="lg" />
+            </motion.div>
+            {/* 关闭提示 */}
+            <motion.p
+              className="absolute bottom-16 text-white/40 text-xs"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.3 }}
+            >
+              轻触任意处关闭
+            </motion.p>
           </motion.div>
         )}
       </AnimatePresence>
