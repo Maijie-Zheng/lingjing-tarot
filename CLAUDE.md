@@ -108,23 +108,23 @@
 
 ## 当前状态
 
-**7 轮开发全部完成。🎉** 准备部署到 Vercel。
+**第一阶段（产品文档 + MVP 开发）已全部完成。🎉**
 
-### 部署步骤
+- 10 份产品文档（`docs/01-10`）
+- 7 轮代码开发
+- Vercel 上线：https://lingjing-tarot.vercel.app
+- ⚠️ Vercel 免费域名国内被墙，需自定义域名或换平台
 
-1. **创建 Vercel 账号** → https://vercel.com/signup （用 GitHub 登录最快）
-2. **登录 CLI** → 终端运行 `npx vercel login`
-3. **部署** → 项目根目录运行 `npx vercel`，一路回车用默认配置
-4. **设置环境变量** → 在 Vercel 后台 → Settings → Environment Variables 添加：
-   - `VITE_DEEPSEEK_API_KEY` = 你的 DeepSeek API Key
-   - `VITE_DEEPSEEK_BASE_URL` = `https://api.deepseek.com/v1`
-5. **重新部署** → `npx vercel --prod` 让环境变量生效
+**自评：60/100 分——功能完整但体验粗糙。准备进入第二阶段打磨。**
 
-### 第 7 轮做了什么
+### 第二阶段要做
 
-| 子任务 | 内容 | 文件 |
-|--------|------|------|
-| 页面过渡动画 | AnimatePresence + fade/slide 动画包装每个页面 | `src/App.jsx` |
-| 移动端适配 | safe-area、overflow-x、viewport-fit=cover、iOS 交互优化 | `src/index.css`, `index.html` |
-| favicon + OG | 品牌金色星星 favicon、OG SVG + 完整 meta 标签 | `public/favicon.svg`, `public/og-image.svg`, `index.html` |
-| Vercel 配置 | vercel.json SPA 路由重写、静态资源缓存、CLI 安装 | `vercel.json`, `package.json` |
+> 从"能跑通"到"好用"——把核心体验从 60 分打磨到 85 分。
+
+| 方向 | 目标 |
+|------|------|
+| 🎨 视觉升级 | 每页都是"壁纸级" |
+| ✨ 仪式感提升 | 动画慢下来，更有沉浸感 |
+| 📤 分享卡片重做 | 让人看了就想保存转发 |
+| 🎵 音效 | 背景音 + 翻牌音效 |
+| 🌐 国内可访问 | 自定义域名或换平台 |
