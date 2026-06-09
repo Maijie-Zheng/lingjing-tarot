@@ -5,16 +5,15 @@ import TarotCard from './TarotCard'
 /**
  * 解读文字逐段显示动画 —— P0-10 重写
  *
- * 三大内容模块各用磨砂玻璃容器：
- * 1. 整体叙事 —— ✨ 灵境总览 · 整体叙事
- * 2. 单牌解读 ×3 —— 图文并茂 + 金色光晕牌面 + 引导语
- * 3. 行动建议 —— 💫 条目式 stagger 入场
+ * 内容模块：
+ * 1. 整体叙事 —— ✨ 灵境总览 · 整体叙事（磨砂玻璃容器）
+ * 2. 单牌解读 ×3 —— 图文并茂 + 金色光晕牌面（无容器，清爽布局）
+ * 3. 行动建议 —— 💫 条目式 stagger 入场（磨砂玻璃容器）
  *
  * Props:
  * - rawText: string — AI 返回的原始文本
  * - cards: Array | null — 三张牌数据
  * - speed: number — 保留兼容，P0-10 使用固定节奏
- * - onCardClick: (card) => void — 卡牌点击放大回调
  */
 
 const SECTION_PATTERN = /(【[^】]+】)/g
@@ -147,7 +146,7 @@ function parseActionItems(content) {
     .filter((l) => l.trim())
 }
 
-export default function ReadingText({ rawText = '', cards = null, speed, onCardClick }) {
+export default function ReadingText({ rawText = '', cards = null, speed }) {
   const sections = useMemo(() => parseSections(rawText), [rawText])
   const [visibleCount, setVisibleCount] = useState(0)
 
@@ -202,112 +201,126 @@ export default function ReadingText({ rawText = '', cards = null, speed, onCardC
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.55, ease: 'easeOut' }}
           >
-            {/* ===== 磨砂玻璃容器 ===== */}
-            <motion.div
-              className="rounded-card px-4 py-4"
-              style={{
-                background: 'rgba(255,255,255,0.03)',
-                backdropFilter: 'blur(8px)',
-                WebkitBackdropFilter: 'blur(8px)',
-                border: `1px solid ${config.borderColor}`,
-                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.02)',
-              }}
-            >
-              {/* ===== 标题行 ===== */}
-              <div className="flex flex-col gap-2 mb-3">
-                <h3 className="text-brand-gold text-base font-serif font-semibold flex items-center gap-1.5 flex-wrap">
-                  <span className="inline-block">{emoji}</span>
-                  <span>{displayTitle}</span>
-                  {card?.isReversed && (
-                    <span
-                      className="text-xs font-normal px-2 py-0.5 rounded-full inline-flex items-center"
-                      style={{
-                        border: '1px solid rgba(201,169,110,0.4)',
-                        color: 'rgba(201,169,110,0.8)',
-                        background: 'rgba(201,169,110,0.08)',
-                        fontFamily: 'PingFang SC, Noto Sans SC, sans-serif',
-                      }}
-                    >
-                      逆位
-                    </span>
-                  )}
-                </h3>
-                {/* 金色渐变分隔线 */}
-                <div
-                  className="h-px"
-                  style={{
-                    background:
-                      'linear-gradient(90deg, transparent, rgba(201,169,110,0.25), transparent)',
+            {/* ===== 单牌解读：无玻璃容器，图文并茂 ===== */}
+            {card ? (
+              <div className="flex gap-3">
+                {/* 左侧牌面：金色光晕 + 悬浮 */}
+                <motion.div
+                  className="flex-shrink-0"
+                  animate={{ y: [0, -4, 0] }}
+                  transition={{
+                    duration: 4,
+                    repeat: Infinity,
+                    ease: 'easeInOut',
                   }}
-                />
-              </div>
+                  style={{
+                    borderRadius: 12,
+                    boxShadow:
+                      '0 0 16px rgba(201,169,110,0.2), 0 0 40px rgba(201,169,110,0.08)',
+                  }}
+                >
+                  <TarotCard card={card} size="md" />
+                </motion.div>
 
-              {/* ===== 内容区 ===== */}
-              {card ? (
-                /* --- 单牌解读：图文并茂 --- */
-                <div className="flex gap-3">
-                  {/* 左侧牌面：金色光晕 + 悬浮 */}
-                  <motion.div
-                    className="flex-shrink-0 cursor-pointer"
-                    animate={{ y: [0, -4, 0] }}
-                    transition={{
-                      duration: 4,
-                      repeat: Infinity,
-                      ease: 'easeInOut',
-                    }}
-                    style={{
-                      borderRadius: 12,
-                      boxShadow:
-                        '0 0 16px rgba(201,169,110,0.2), 0 0 40px rgba(201,169,110,0.08)',
-                    }}
-                    onClick={() => onCardClick?.(card)}
-                    whileHover={{ scale: 1.03 }}
-                    whileTap={{ scale: 0.97 }}
-                  >
-                    <TarotCard card={card} size="md" />
-                  </motion.div>
-
-                  {/* 右侧文字 */}
-                  <div className="flex-1 min-w-0">
-                    <p
-                      className="text-white/85 text-body leading-relaxed whitespace-pre-line"
-                      dangerouslySetInnerHTML={{
-                        __html: highlightCardNames(displayContent, cards),
+                {/* 右侧文字 */}
+                <div className="flex-1 min-w-0">
+                  {/* 标题行 */}
+                  <div className="flex flex-col gap-2 mb-3">
+                    <h3 className="text-brand-gold text-base font-serif font-semibold flex items-center gap-1.5 flex-wrap">
+                      <span className="inline-block">{emoji}</span>
+                      <span>{displayTitle}</span>
+                      {card.isReversed && (
+                        <span
+                          className="text-xs font-normal px-2 py-0.5 rounded-full inline-flex items-center"
+                          style={{
+                            border: '1px solid rgba(201,169,110,0.4)',
+                            color: 'rgba(201,169,110,0.8)',
+                            background: 'rgba(201,169,110,0.08)',
+                            fontFamily: 'PingFang SC, Noto Sans SC, sans-serif',
+                          }}
+                        >
+                          逆位
+                        </span>
+                      )}
+                    </h3>
+                    {/* 金色渐变分隔线 */}
+                    <div
+                      className="h-px"
+                      style={{
+                        background:
+                          'linear-gradient(90deg, rgba(201,169,110,0.25), transparent)',
                       }}
                     />
                   </div>
+
+                  {/* 正文 */}
+                  <p
+                    className="text-white/85 text-body leading-relaxed whitespace-pre-line"
+                    dangerouslySetInnerHTML={{
+                      __html: highlightCardNames(displayContent, cards),
+                    }}
+                  />
                 </div>
-              ) : type === 'action' && actionItems && actionItems.length >= 2 ? (
-                /* --- 行动建议：条目式 stagger --- */
-                <div className="flex flex-col gap-3">
-                  {actionItems.map((item, idx) => (
-                    <motion.div
-                      key={idx}
-                      className="flex gap-2"
-                      initial={{ opacity: 0, x: -8 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{
-                        delay: idx * 0.12,
-                        duration: 0.35,
-                        ease: 'easeOut',
-                      }}
-                    >
-                      <span className="text-white/85 text-body leading-relaxed whitespace-pre-line">
-                        {item.trim()}
-                      </span>
-                    </motion.div>
-                  ))}
+              </div>
+            ) : (
+              /* ===== 整体叙事 / 行动建议：磨砂玻璃容器 ===== */
+              <div
+                className="rounded-card px-4 py-4"
+                style={{
+                  background: 'rgba(255,255,255,0.03)',
+                  backdropFilter: 'blur(8px)',
+                  WebkitBackdropFilter: 'blur(8px)',
+                  border: `1px solid ${config.borderColor}`,
+                  boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.02)',
+                }}
+              >
+                {/* 标题行 */}
+                <div className="flex flex-col gap-2 mb-3">
+                  <h3 className="text-brand-gold text-base font-serif font-semibold flex items-center gap-1.5 flex-wrap">
+                    <span className="inline-block">{emoji}</span>
+                    <span>{displayTitle}</span>
+                  </h3>
+                  {/* 金色渐变分隔线 */}
+                  <div
+                    className="h-px"
+                    style={{
+                      background:
+                        'linear-gradient(90deg, transparent, rgba(201,169,110,0.25), transparent)',
+                    }}
+                  />
                 </div>
-              ) : (
-                /* --- 整体叙事 / 纯文字 --- */
-                <p
-                  className="text-white/85 text-body leading-relaxed whitespace-pre-line"
-                  dangerouslySetInnerHTML={{
-                    __html: highlightCardNames(displayContent, cards),
-                  }}
-                />
-              )}
-            </motion.div>
+
+                {/* 内容 */}
+                {type === 'action' && actionItems && actionItems.length >= 2 ? (
+                  <div className="flex flex-col gap-3">
+                    {actionItems.map((item, idx) => (
+                      <motion.div
+                        key={idx}
+                        className="flex gap-2"
+                        initial={{ opacity: 0, x: -8 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{
+                          delay: idx * 0.12,
+                          duration: 0.35,
+                          ease: 'easeOut',
+                        }}
+                      >
+                        <span className="text-white/85 text-body leading-relaxed whitespace-pre-line">
+                          {item.trim()}
+                        </span>
+                      </motion.div>
+                    ))}
+                  </div>
+                ) : (
+                  <p
+                    className="text-white/85 text-body leading-relaxed whitespace-pre-line"
+                    dangerouslySetInnerHTML={{
+                      __html: highlightCardNames(displayContent, cards),
+                    }}
+                  />
+                )}
+              </div>
+            )}
 
             {/* ===== 模块间分隔 ✦ ===== */}
             {i < visibleCount - 1 && (

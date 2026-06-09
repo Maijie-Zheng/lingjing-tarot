@@ -21,8 +21,7 @@ function isWeChat() {
  * - Loading 星轨仪式感动画（星轨双环 + 牌面浮现 + 诗意文案）
  * - "重新抽牌"保留问题（修复 bug）
  * - 背景光晕 + 漂浮光斑氛围增强
- * - 卡牌点击放大模态框
- * - ReadingText P0-10 模块化重写（磨砂容器 + 金色标题 + 引导语）
+ * - ReadingText P0-10 模块化重写（单牌区无玻璃容器 + 叙事/行动磨砂玻璃）
  */
 export default function ReadingPage() {
   const location = useLocation()
@@ -40,7 +39,6 @@ export default function ReadingPage() {
   const [errorMessage, setErrorMessage] = useState('')
   const [saved, setSaved] = useState(false)
   const [shareImage, setShareImage] = useState(null)
-  const [lightboxCard, setLightboxCard] = useState(null) // 卡牌放大模态框
   const hasStartedRef = useRef(false)
   const readingRef = useRef('')
 
@@ -274,7 +272,6 @@ export default function ReadingPage() {
                 rawText={readingText}
                 cards={hasValidData ? cards : null}
                 speed={800}
-                onCardClick={setLightboxCard}
               />
             </motion.div>
           )}
@@ -309,50 +306,6 @@ export default function ReadingPage() {
                 🏠 首页
               </Link>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* ===== 卡牌放大模态框（P0-10 新增）===== */}
-      <AnimatePresence>
-        {lightboxCard && (
-          <motion.div
-            key="card-lightbox"
-            className="fixed inset-0 z-50 flex items-center justify-center"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.25 }}
-            onClick={() => setLightboxCard(null)}
-            style={{
-              background: 'rgba(0,0,0,0.6)',
-              backdropFilter: 'blur(4px)',
-              WebkitBackdropFilter: 'blur(4px)',
-            }}
-          >
-            <motion.div
-              initial={{ scale: 0.85, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.85, opacity: 0 }}
-              transition={{ duration: 0.3, ease: 'easeOut' }}
-              onClick={(e) => e.stopPropagation()}
-              style={{
-                borderRadius: 16,
-                boxShadow:
-                  '0 0 30px rgba(201,169,110,0.3), 0 0 80px rgba(201,169,110,0.1), 0 0 120px rgba(201,169,110,0.04)',
-              }}
-            >
-              <TarotCard card={lightboxCard} size="lg" />
-            </motion.div>
-            {/* 关闭提示 */}
-            <motion.p
-              className="absolute bottom-16 text-white/40 text-xs"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.3 }}
-            >
-              轻触任意处关闭
-            </motion.p>
           </motion.div>
         )}
       </AnimatePresence>
