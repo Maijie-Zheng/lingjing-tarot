@@ -37,6 +37,26 @@
 
     /* 移动端安全区域 */
     min-height: 100dvh;
+
+    /* 防止横向溢出 */
+    overflow-x: hidden;
+
+    /* 禁止 iOS 长按弹出菜单（提升 App 感） */
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  /* 允许输入框和解读文本选中（用于复制分享） */
+  input, textarea, .selectable {
+    -webkit-user-select: text;
+    user-select: text;
+    -webkit-touch-callout: default;
+  }
+
+  /* 禁用 iOS 点击高亮 */
+  a, button, [role="button"] {
+    -webkit-tap-highlight-color: transparent;
   }
 
   /* 标题默认用衬线体 */
@@ -63,11 +83,15 @@
     box-shadow: 0 0 20px rgba(201, 169, 110, 0.3);
   }
 
-  /* 页面容器 */
+  /* 页面容器 —— 移动端优先，适配 iPhone SE(320) ~ Pro Max(430) */
   .page-container {
-    @apply min-h-screen px-page pb-8;
-    max-width: 375px;
+    @apply min-h-screen px-page;
+    max-width: 430px;
     margin: 0 auto;
+    /* 顶部避开刘海/灵动岛 */
+    padding-top: max(0px, env(safe-area-inset-top, 0px));
+    /* 底部留出安全区域 + 操作按钮空间 */
+    padding-bottom: max(32px, env(safe-area-inset-bottom, 0px));
   }
 
   /* 卡片容器 */

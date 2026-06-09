@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1a0a2e"/>
+      <stop offset="100%" stop-color="#0d0221"/>
+    </linearGradient>
+    <linearGradient id="gold-line" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="transparent"/>
+      <stop offset="50%" stop-color="rgba(201,169,110,0.4)"/>
+      <stop offset="100%" stop-color="transparent"/>
+    </linearGradient>
+  </defs>
+
+  <!-- 背景 -->
+  <rect width="1200" height="630" fill="url(#bg)"/>
+
+  <!-- 星空粒子 -->
+  <circle cx="100" cy="80" r="1.5" fill="rgba(201,169,110,0.6)"/>
+  <circle cx="250" cy="150" r="2" fill="rgba(255,255,255,0.4)"/>
+  <circle cx="400" cy="60" r="1" fill="rgba(201,169,110,0.5)"/>
+  <circle cx="550" cy="120" r="2.5" fill="rgba(255,255,255,0.3)"/>
+  <circle cx="700" cy="50" r="1.5" fill="rgba(201,169,110,0.7)"/>
+  <circle cx="850" cy="180" r="1" fill="rgba(255,255,255,0.5)"/>
+  <circle cx="1000" cy="80" r="2" fill="rgba(201,169,110,0.4)"/>
+  <circle cx="1100" cy="140" r="1.5" fill="rgba(255,255,255,0.6)"/>
+  <circle cx="150" cy="450" r="1" fill="rgba(201,169,110,0.5)"/>
+  <circle cx="350" cy="520" r="2" fill="rgba(255,255,255,0.3)"/>
+  <circle cx="600" cy="480" r="1.5" fill="rgba(201,169,110,0.6)"/>
+  <circle cx="800" cy="550" r="1" fill="rgba(255,255,255,0.4)"/>
+  <circle cx="1050" cy="500" r="2" fill="rgba(201,169,110,0.5)"/>
+
+  <!-- 品牌标题 -->
+  <text x="600" y="240" text-anchor="middle" font-family="serif" font-size="96" font-weight="bold" fill="#c9a96e" letter-spacing="24">灵 境</text>
+
+  <!-- 副标题 -->
+  <text x="600" y="310" text-anchor="middle" font-family="sans-serif" font-size="36" fill="rgba(255,255,255,0.5)">AI 塔罗 · 心灵之境</text>
+
+  <!-- 分隔线 -->
+  <rect x="300" y="360" width="600" height="1" fill="url(#gold-line)"/>
+
+  <!-- 一句话描述 -->
+  <text x="600" y="430" text-anchor="middle" font-family="sans-serif" font-size="32" fill="rgba(255,255,255,0.7)">"让塔罗倾听你的心事"</text>
+
+  <!-- 底部 -->
+  <text x="600" y="530" text-anchor="middle" font-family="sans-serif" font-size="24" fill="rgba(255,255,255,0.35)">🔮 输入问题 → 抽三张牌 → AI 为你解读</text>
+</svg>

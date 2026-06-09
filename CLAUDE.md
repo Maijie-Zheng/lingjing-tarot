@@ -102,10 +102,29 @@
 | 4 | DeepSeek API + 解读逐段显示 | ✅ 已完成 |
 | 5 | localStorage + 历史记录 | ✅ 已完成 |
 | 6 | Canvas 分享卡片生成 | ✅ 已完成 |
-| 7 | 动画打磨 + Vercel 部署 | 🔄 进行中 |
+| 7 | 动画打磨 + Vercel 部署 | ✅ 已完成 |
 
 ---
 
 ## 当前状态
 
-**第 7 轮开发中：动画打磨 + Vercel 部署。**
+**7 轮开发全部完成。🎉** 准备部署到 Vercel。
+
+### 部署步骤
+
+1. **创建 Vercel 账号** → https://vercel.com/signup （用 GitHub 登录最快）
+2. **登录 CLI** → 终端运行 `npx vercel login`
+3. **部署** → 项目根目录运行 `npx vercel`，一路回车用默认配置
+4. **设置环境变量** → 在 Vercel 后台 → Settings → Environment Variables 添加：
+   - `VITE_DEEPSEEK_API_KEY` = 你的 DeepSeek API Key
+   - `VITE_DEEPSEEK_BASE_URL` = `https://api.deepseek.com/v1`
+5. **重新部署** → `npx vercel --prod` 让环境变量生效
+
+### 第 7 轮做了什么
+
+| 子任务 | 内容 | 文件 |
+|--------|------|------|
+| 页面过渡动画 | AnimatePresence + fade/slide 动画包装每个页面 | `src/App.jsx` |
+| 移动端适配 | safe-area、overflow-x、viewport-fit=cover、iOS 交互优化 | `src/index.css`, `index.html` |
+| favicon + OG | 品牌金色星星 favicon、OG SVG + 完整 meta 标签 | `public/favicon.svg`, `public/og-image.svg`, `index.html` |
+| Vercel 配置 | vercel.json SPA 路由重写、静态资源缓存、CLI 安装 | `vercel.json`, `package.json` |
