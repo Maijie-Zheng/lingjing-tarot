@@ -1,0 +1,92 @@
+/* ===== 字体 ===== */
+/* Noto Serif SC（标题衬线体）—— Google Fonts，必须在 Tailwind 指令之前 */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600;700&display=swap');
+
+/* ===== Tailwind 指令 ===== */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ===== 全局基础样式 ===== */
+@layer base {
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  html {
+    /* 移动端优先：375px 基准 */
+    font-size: 16px;
+  }
+
+  body {
+    font-family: 'PingFang SC', 'Noto Sans SC', 'Helvetica Neue', sans-serif;
+    font-size: 16px;
+    line-height: 1.8;
+    color: #e8e0f0; /* 浅紫白——在深色背景上的正文色 */
+
+    /* 深紫渐变背景——整个 App 的底色 */
+    background: linear-gradient(180deg, #1a0a2e 0%, #0d0221 100%);
+    background-attachment: fixed;
+
+    /* 防字体缩放 */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+
+    /* 移动端安全区域 */
+    min-height: 100dvh;
+  }
+
+  /* 标题默认用衬线体 */
+  h1, h2, h3, h4 {
+    font-family: 'Noto Serif SC', serif;
+    font-weight: 600;
+    color: #f0e6d8; /* 浅金色白 */
+    line-height: 1.4;
+  }
+
+  /* 链接重置 */
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+}
+
+/* ===== 全局组件层 ===== */
+@layer components {
+  /* 金色按钮（主要 CTA） */
+  .btn-gold {
+    @apply bg-brand-gold text-mystic-deeper font-semibold rounded-card px-6 py-3
+           active:scale-95 transition-transform;
+    box-shadow: 0 0 20px rgba(201, 169, 110, 0.3);
+  }
+
+  /* 页面容器 */
+  .page-container {
+    @apply min-h-screen px-page pb-8;
+    max-width: 375px;
+    margin: 0 auto;
+  }
+
+  /* 卡片容器 */
+  .mystic-card {
+    @apply rounded-card p-5;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(10px);
+  }
+}
+
+/* ===== 滚动条美化 ===== */
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(201, 169, 110, 0.3);
+  border-radius: 2px;
+}
