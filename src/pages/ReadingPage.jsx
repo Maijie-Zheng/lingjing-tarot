@@ -7,6 +7,7 @@ import ReadingText from '../components/ReadingText'
 import { getSystemPrompt, buildUserPrompt } from '../utils/promptBuilder'
 import { callDeepSeek } from '../utils/api'
 import { saveReading } from '../utils/storage'
+import { generateShareCanvas, canvasToDataURL, downloadImage } from '../utils/shareImage'
 
 /**
  * 解读结果页
@@ -70,6 +71,41 @@ export default function ReadingPage() {
 
     fetchReading()
   }, [])
+
+  // 分享
+  const handleShare = async () => {
+    try {
+      const canvas = generateShareCanvas({ question, cards, reading: readingRef.current })
+      const dataURL = canvasToDataURL(canvas)
+
+      // 优先使用 Web Share API（移动端原生分享）
+      if (navigator.share && navigator.canShare) {
+        const blob = await (await fetch(dataURL)).blob()
+        const file = new File([blob], '灵境-塔罗解读.png', { type: 'image/png' })
+        if (navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            title: '灵境 · AI 塔罗解读',
+            text: '来看看我的塔罗解读结果 🔮',
+            files: [file],
+          })
+          return
+        }
+      }
+
+      // Fallback：下载图片
+      downloadImage(dataURL)
+    } catch (err) {
+      // 用户取消分享不算错误
+      if (err.name === 'AbortError') return
+      // 不支持 Web Share API → 下载
+      try {
+        const canvas = generateShareCanvas({ question, cards, reading: readingRef.current })
+        downloadImage(canvasToDataURL(canvas))
+      } catch {
+        // 静默失败
+      }
+    }
+  }
 
   // 手动保存
   const handleSave = () => {
@@ -168,7 +204,7 @@ export default function ReadingPage() {
           animate={{ opacity: 1 }}
           transition={{ delay: 0.5 }}
         >
-          <button className="btn-gold">📤 分享卡片</button>
+          <button className="btn-gold" onClick={handleShare}>📤 分享卡片</button>
           <div className="flex gap-4 justify-center">
             <button
               onClick={handleSave}
