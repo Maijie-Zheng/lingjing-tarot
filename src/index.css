@@ -118,6 +118,15 @@
   -webkit-overflow-scrolling: touch;
 }
 
+/* ===== placeholder 呼吸动画 ===== */
+.placeholder-breathe::placeholder {
+  animation: breathe 3s ease-in-out infinite;
+}
+@keyframes breathe {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.6; }
+}
+
 /* ===== 滚动条美化 ===== */
 ::-webkit-scrollbar {
   width: 4px;
