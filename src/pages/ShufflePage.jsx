@@ -2,108 +2,75 @@ import { useState, useEffect, useCallback } from 'react'
 import { Link, useSearchParams, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import TarotCard from '../components/TarotCard'
-import { drawRandomCards } from '../data/tarotCards'
+import CardCarousel from '../components/CardCarousel'
+import tarotCards from '../data/tarotCards'
 
 // 三张牌的位置定义
 const POSITIONS = [
-  { key: 'past',   label: '过去', emoji: '🌙', desc: '影响你的根源' },
-  { key: 'present', label: '现在', emoji: '✨', desc: '你当下的状态' },
-  { key: 'future',  label: '未来', emoji: '🔮', desc: '趋势与方向' },
+  { key: 'past',   label: '过去', emoji: '🌙' },
+  { key: 'present', label: '现在', emoji: '✨' },
+  { key: 'future',  label: '未来', emoji: '🔮' },
 ]
 
-const STAGE_DURATION = {
-  shuffle: 2500,   // 洗牌动画时长
-  revealPause: 600, // 每张翻牌后停顿
-  finalPause: 800,  // 最后一张翻完后停顿
-}
+const SHUFFLE_DURATION = 1500  // 洗牌动画 1.5s
+const FINAL_PAUSE = 1000       // 选满后停顿 1s
 
 /**
- * 洗牌选牌页 —— 仪式感的核心
- * 阶段 1：洗牌动画（自动）
- * 阶段 2：3×3 网格选 3 张牌
- * 阶段 3：逐张翻牌揭示
+ * 洗牌选牌页 —— P0-3 重做：滚动轮播 + 选即翻
+ *
+ * 阶段 1：洗牌动画（1.5s）
+ * 阶段 2：CardCarousel 滚动选牌 + 底部已选区
+ * 选满 3 张 → 1s 停顿 → 跳转解读页
  */
 export default function ShufflePage() {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const question = searchParams.get('q') || '未提供问题'
 
-  // 阶段状态：shuffle → select → reveal
   const [stage, setStage] = useState('shuffle')
-  const [gridCards] = useState(() => drawRandomCards(9))  // 9 张候选牌
-  const [selectedCards, setSelectedCards] = useState([])   // 已选中的牌（含位置）
-  const [revealedCount, setRevealedCount] = useState(0)    // 已翻牌数量
+  const [selectedCards, setSelectedCards] = useState([])
+  const [justFlipped, setJustFlipped] = useState(null) // 刚翻的牌 id（触发飞入动画）
 
   // ===== 阶段 1：洗牌 → 自动进入选牌 =====
   useEffect(() => {
     if (stage !== 'shuffle') return
-    const timer = setTimeout(() => setStage('select'), STAGE_DURATION.shuffle)
+    const timer = setTimeout(() => setStage('select'), SHUFFLE_DURATION)
     return () => clearTimeout(timer)
   }, [stage])
 
-  // ===== 阶段 2：选牌逻辑 =====
+  // ===== 选中一张牌 =====
   const handleSelectCard = useCallback((card) => {
     setSelectedCards((prev) => {
-      // 已选中的牌：点击取消
-      const isSelected = prev.find((c) => c.id === card.id)
-      if (isSelected) {
-        // 取消选中，后面的牌位置前移
-        const filtered = prev.filter((c) => c.id !== card.id)
-        return filtered.map((c, i) => ({ ...c, position: POSITIONS[i] }))
-      }
-      // 已满 3 张
       if (prev.length >= 3) return prev
-      // 新选中的牌
-      const pos = POSITIONS[prev.length]
-      return [...prev, { ...card, position: pos, isReversed: Math.random() < 0.3 }]
+      const newCard = {
+        ...card,
+        position: POSITIONS[prev.length],
+        isReversed: Math.random() < 0.3,
+      }
+      return [...prev, newCard]
     })
+    setJustFlipped(card.id)
+    setTimeout(() => setJustFlipped(null), 600)
   }, [])
 
-  // ===== 阶段 3：翻牌序列 =====
+  // ===== 选满 3 张 → 跳转解读页 =====
   useEffect(() => {
-    if (stage !== 'reveal') return
-    if (revealedCount >= selectedCards.length) {
-      // 全部翻完 → 跳转解读页
-      const timer = setTimeout(() => {
-        navigate('/reading', {
-          state: {
-            question,
-            cards: selectedCards,
-          },
-        })
-      }, STAGE_DURATION.finalPause)
-      return () => clearTimeout(timer)
-    }
-
-    // 逐张翻牌
+    if (selectedCards.length < 3) return
     const timer = setTimeout(() => {
-      setRevealedCount((c) => c + 1)
-    }, STAGE_DURATION.revealPause)
+      navigate('/reading', {
+        state: { question, cards: selectedCards },
+      })
+    }, FINAL_PAUSE)
     return () => clearTimeout(timer)
-  }, [stage, revealedCount, selectedCards, question, navigate])
-
-  // ===== 确认选牌 =====
-  const handleConfirm = () => {
-    if (selectedCards.length !== 3) return
-    setStage('reveal')
-    setRevealedCount(1) // 立即揭示第一张
-  }
-
-  // ===== 判断某张牌是否被选中 =====
-  const isCardSelected = (card) => selectedCards.some((c) => c.id === card.id)
-  const getSelectionIndex = (card) => {
-    const idx = selectedCards.findIndex((c) => c.id === card.id)
-    return idx >= 0 ? idx + 1 : null
-  }
+  }, [selectedCards.length, selectedCards, question, navigate])
 
   return (
-    <div className="flex flex-col min-h-screen pt-6 gap-6 px-page">
+    <div className="flex flex-col min-h-screen pt-6 gap-4 px-page">
       {/* 顶栏 */}
       <div className="flex items-center justify-between">
         <Link to="/ask" className="text-brand-gold text-sm">
           &larr; 换问题
         </Link>
-        <span className="text-white/30 text-xs capitalize">{stage}</span>
       </div>
 
       {/* 用户问题 */}
@@ -112,8 +79,8 @@ export default function ShufflePage() {
         <p className="text-white/90 text-sm leading-relaxed">{question}</p>
       </div>
 
-      {/* ===== 阶段 1：洗牌动画 ===== */}
       <AnimatePresence mode="wait">
+        {/* ===== 阶段 1：洗牌动画 ===== */}
         {stage === 'shuffle' && (
           <motion.div
             key="shuffle"
@@ -158,17 +125,17 @@ export default function ShufflePage() {
                 style={{ background: '#c9a96e' }}
                 initial={{ width: '0%' }}
                 animate={{ width: '100%' }}
-                transition={{ duration: STAGE_DURATION.shuffle / 1000, ease: 'linear' }}
+                transition={{ duration: SHUFFLE_DURATION / 1000, ease: 'linear' }}
               />
             </div>
           </motion.div>
         )}
 
-        {/* ===== 阶段 2：选牌 ===== */}
+        {/* ===== 阶段 2：滚动选牌 ===== */}
         {stage === 'select' && (
           <motion.div
             key="select"
-            className="flex-1 flex flex-col gap-6"
+            className="flex-1 flex flex-col gap-4"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
           >
@@ -176,174 +143,86 @@ export default function ShufflePage() {
             <div className="text-center">
               <p className="text-white/60 text-sm">
                 {selectedCards.length === 0
-                  ? '请凭直觉，选出 3 张牌'
+                  ? '滑动浏览，凭直觉选出 3 张牌'
                   : `已选 ${selectedCards.length} / 3`}
               </p>
-              {/* 当前选择提示 */}
               {selectedCards.length < 3 && (
                 <p className="text-brand-gold text-xs mt-1">
-                  {POSITIONS[selectedCards.length]?.emoji} 第 {selectedCards.length + 1} 张：代表「{POSITIONS[selectedCards.length]?.label}」——{POSITIONS[selectedCards.length]?.desc}
+                  {POSITIONS[selectedCards.length]?.emoji} 第 {selectedCards.length + 1} 张：代表「{POSITIONS[selectedCards.length]?.label}」
                 </p>
               )}
             </div>
 
-            {/* 3×3 牌阵 */}
-            <div className="grid grid-cols-3 gap-y-4 gap-x-2 place-items-center mx-auto">
-              {gridCards.map((card) => {
-                const selected = isCardSelected(card)
-                const index = getSelectionIndex(card)
-                const isFull = selectedCards.length >= 3 && !selected
-
-                return (
-                  <motion.div
-                    key={card.id}
-                    className="relative"
-                    whileHover={!isFull ? { scale: 1.05 } : {}}
-                    whileTap={!isFull ? { scale: 0.95 } : {}}
-                    onClick={() => handleSelectCard(card)}
-                  >
-                    <TarotCard
-                      size="sm"
-                      selected={selected}
-                      disabled={isFull}
-                    />
-                    {/* 选中序号角标 */}
-                    {index && (
-                      <motion.div
-                        className="absolute -top-2 -right-2 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white"
-                        style={{ background: '#c9a96e' }}
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                      >
-                        {index}
-                      </motion.div>
-                    )}
-                  </motion.div>
-                )
-              })}
+            {/* 牌轮播 */}
+            <div className="flex-1 flex items-center -mx-page">
+              <CardCarousel
+                cards={tarotCards}
+                selectedCards={selectedCards}
+                onSelect={handleSelectCard}
+                maxSelect={3}
+              />
             </div>
 
-            {/* 已选牌概览 + 确认按钮 */}
-            <div className="flex flex-col gap-3 mt-auto">
-              {selectedCards.length > 0 && (
-                <div className="flex justify-center gap-2">
-                  {selectedCards.map((card, i) => (
-                    <div key={card.id} className="text-center">
-                      <div className="w-12 h-18 rounded flex items-center justify-center text-xs"
-                        style={{ background: 'linear-gradient(135deg, #0d1b3e, #162447)', border: '1px solid rgba(201,169,110,0.4)' }}>
-                        🃏
-                      </div>
-                      <span className="text-xs text-brand-gold">{card.position?.label}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              <button
-                onClick={handleConfirm}
-                disabled={selectedCards.length !== 3}
-                className={`btn-gold text-lg py-3 ${
-                  selectedCards.length === 3 ? '' : 'opacity-30 pointer-events-none'
-                }`}
-              >
-                {selectedCards.length === 3 ? '🔮 确认这三张牌' : `请选 ${3 - selectedCards.length} 张牌`}
-              </button>
-            </div>
-          </motion.div>
-        )}
-
-        {/* ===== 阶段 3：翻牌揭示 ===== */}
-        {stage === 'reveal' && (
-          <motion.div
-            key="reveal"
-            className="flex-1 flex flex-col items-center justify-center gap-4"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-          >
-            <p className="text-white/40 text-sm mb-2">牌面正在揭示...</p>
-
-            <div className="flex gap-3 justify-center">
-              {selectedCards.map((card, i) => {
-                const isRevealed = i < revealedCount
-
+            {/* 底部：已选牌位 */}
+            <div className="flex justify-center gap-3 pb-2">
+              {POSITIONS.map((pos, i) => {
+                const card = selectedCards[i]
                 return (
                   <motion.div
-                    key={card.id}
-                    className="flex flex-col items-center gap-2"
+                    key={pos.key}
+                    className="flex flex-col items-center gap-1"
                     layout
                   >
-                    {/* 3D 翻转容器 */}
+                    {/* 牌槽 */}
                     <motion.div
+                      className="rounded-card flex items-center justify-center"
                       style={{
-                        width: 100,
-                        height: 150,
-                        perspective: 600,
+                        width: 72,
+                        height: 108,
+                        background: card
+                          ? 'transparent'
+                          : 'rgba(255,255,255,0.05)',
+                        border: card
+                          ? '2px solid rgba(201,169,110,0.4)'
+                          : '1px dashed rgba(255,255,255,0.15)',
                       }}
                     >
-                      <motion.div
-                        className="relative w-full h-full"
-                        animate={{ rotateY: isRevealed ? 180 : 0 }}
-                        transition={{ duration: 0.6, ease: 'easeInOut' }}
-                        style={{
-                          transformStyle: 'preserve-3d',
-                        }}
-                      >
-                        {/* 牌背 */}
-                        <div
-                          className="absolute inset-0 rounded-card overflow-hidden"
-                          style={{ backfaceVisibility: 'hidden' }}
+                      {card ? (
+                        <motion.div
+                          className="w-full h-full rounded-card overflow-hidden"
+                          initial={{ scale: 0, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          transition={{ type: 'spring', stiffness: 300, damping: 18 }}
                         >
-                          <div
-                            className="w-full h-full flex items-center justify-center"
-                            style={{ background: 'linear-gradient(135deg, #0d1b3e, #162447)', border: '2px solid rgba(255,255,255,0.1)' }}
-                          >
-                            <div className="text-brand-gold/60 text-2xl">✦</div>
-                          </div>
-                        </div>
-
-                        {/* 牌面（翻转后） */}
-                        <div
-                          className="absolute inset-0 rounded-card overflow-hidden flex flex-col items-center justify-center gap-2 p-3 text-center"
-                          style={{
-                            backfaceVisibility: 'hidden',
-                            transform: 'rotateY(180deg)',
-                            background: 'linear-gradient(135deg, #1e1050, #1a0a2e)',
-                            border: '2px solid rgba(201,169,110,0.3)',
-                          }}
-                        >
-                          <span className="text-xl">🃏</span>
-                          <span className="text-sm font-serif text-brand-gold leading-tight">
-                            {card.name}
-                          </span>
-                          {card.isReversed && (
-                            <span className="text-xs text-red-400">(逆位)</span>
-                          )}
-                        </div>
-                      </motion.div>
+                          <TarotCard
+                            card={card}
+                            size="sm"
+                          />
+                        </motion.div>
+                      ) : (
+                        <span className="text-white/15 text-lg">{pos.emoji}</span>
+                      )}
                     </motion.div>
-
                     {/* 位置标签 */}
-                    <motion.div
-                      className="text-center"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: isRevealed ? 1 : 0 }}
-                      transition={{ delay: 0.3 }}
-                    >
-                      <span className="text-xs text-brand-gold">
-                        {card.position?.emoji} {card.position?.label}
-                      </span>
-                    </motion.div>
+                    <span className="text-xs text-brand-gold">{pos.label}</span>
                   </motion.div>
                 )
               })}
             </div>
 
-            {/* 揭示进度提示 */}
-            <p className="text-white/30 text-xs mt-4">
-              {revealedCount < selectedCards.length
-                ? `正在揭示第 ${revealedCount + 1} 张...`
-                : '即将进入解读...'}
-            </p>
+            {/* 选满提示 */}
+            <AnimatePresence>
+              {selectedCards.length === 3 && (
+                <motion.p
+                  className="text-center text-brand-gold text-sm"
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                >
+                  ✨ 命运之牌已揭示，即将进入解读...
+                </motion.p>
+              )}
+            </AnimatePresence>
           </motion.div>
         )}
       </AnimatePresence>

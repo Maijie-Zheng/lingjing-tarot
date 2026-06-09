@@ -103,6 +103,21 @@
   }
 }
 
+/* ===== 隐藏滚动条（用于轮播组件） ===== */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* ===== 牌轮播吸附 ===== */
+.carousel-snap {
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+
 /* ===== 滚动条美化 ===== */
 ::-webkit-scrollbar {
   width: 4px;
