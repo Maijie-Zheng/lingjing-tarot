@@ -201,65 +201,100 @@ export default function ReadingText({ rawText = '', cards = null, speed }) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.55, ease: 'easeOut' }}
           >
-            {/* ===== 单牌解读：无玻璃容器，图文并茂 ===== */}
+            {/* ===== 单牌解读：卡牌居中 + 金色光晕 + 标题下置 + · 引导正文 ===== */}
             {card ? (
-              <div className="flex gap-3">
-                {/* 左侧牌面：金色光晕 + 悬浮 */}
+              <div className="flex flex-col items-center">
+                {/* 卡牌居中：lg 尺寸 + 强烈三层金色光晕 + 悬浮呼吸 */}
                 <motion.div
-                  className="flex-shrink-0"
-                  animate={{ y: [0, -4, 0] }}
+                  className="mb-5"
+                  animate={{ y: [0, -6, 0] }}
                   transition={{
-                    duration: 4,
+                    duration: 3.5,
                     repeat: Infinity,
                     ease: 'easeInOut',
                   }}
-                  style={{
-                    borderRadius: 12,
-                    boxShadow:
-                      '0 0 16px rgba(201,169,110,0.2), 0 0 40px rgba(201,169,110,0.08)',
-                  }}
                 >
-                  <TarotCard card={card} size="md" />
+                  <motion.div
+                    animate={{
+                      boxShadow: [
+                        '0 0 40px rgba(201,169,110,0.35), 0 0 80px rgba(201,169,110,0.15), 0 0 140px rgba(201,169,110,0.06)',
+                        '0 0 60px rgba(201,169,110,0.5), 0 0 120px rgba(201,169,110,0.25), 0 0 180px rgba(201,169,110,0.1)',
+                        '0 0 40px rgba(201,169,110,0.35), 0 0 80px rgba(201,169,110,0.15), 0 0 140px rgba(201,169,110,0.06)',
+                      ],
+                    }}
+                    transition={{
+                      duration: 3,
+                      repeat: Infinity,
+                      ease: 'easeInOut',
+                    }}
+                    style={{ borderRadius: 12 }}
+                  >
+                    <TarotCard card={card} size="lg" />
+                  </motion.div>
                 </motion.div>
 
-                {/* 右侧文字 */}
-                <div className="flex-1 min-w-0">
-                  {/* 标题行 */}
-                  <div className="flex flex-col gap-2 mb-3">
-                    <h3 className="text-brand-gold text-base font-serif font-semibold flex items-center gap-1.5 flex-wrap">
-                      <span className="inline-block">{emoji}</span>
-                      <span>{displayTitle}</span>
-                      {card.isReversed && (
-                        <span
-                          className="text-xs font-normal px-2 py-0.5 rounded-full inline-flex items-center"
-                          style={{
-                            border: '1px solid rgba(201,169,110,0.4)',
-                            color: 'rgba(201,169,110,0.8)',
-                            background: 'rgba(201,169,110,0.08)',
-                            fontFamily: 'PingFang SC, Noto Sans SC, sans-serif',
-                          }}
-                        >
-                          逆位
-                        </span>
-                      )}
-                    </h3>
-                    {/* 金色渐变分隔线 */}
-                    <div
-                      className="h-px"
+                {/* 标题：大号金色衬线体，居中，外发光 */}
+                <h3
+                  className="text-brand-gold text-xl font-serif font-bold text-center mb-3"
+                  style={{
+                    textShadow: '0 0 20px rgba(201,169,110,0.25)',
+                    letterSpacing: '0.05em',
+                  }}
+                >
+                  {displayTitle}
+                  {card.isReversed && (
+                    <span
+                      className="inline-block ml-2 text-xs font-normal px-2 py-0.5 rounded-full align-middle"
                       style={{
-                        background:
-                          'linear-gradient(90deg, rgba(201,169,110,0.25), transparent)',
+                        border: '1px solid rgba(201,169,110,0.4)',
+                        color: 'rgba(201,169,110,0.8)',
+                        background: 'rgba(201,169,110,0.08)',
+                        fontFamily: 'PingFang SC, Noto Sans SC, sans-serif',
+                        letterSpacing: 0,
                       }}
-                    />
-                  </div>
+                    >
+                      逆位
+                    </span>
+                  )}
+                </h3>
 
-                  {/* 正文 */}
-                  <p
-                    className="text-white/85 text-body leading-relaxed whitespace-pre-line"
-                    dangerouslySetInnerHTML={{
-                      __html: highlightCardNames(displayContent, cards),
-                    }}
-                  />
+                {/* 金色短分隔线 */}
+                <div
+                  className="h-px mb-4 mx-auto"
+                  style={{
+                    width: 80,
+                    background:
+                      'linear-gradient(90deg, transparent, rgba(201,169,110,0.35), transparent)',
+                  }}
+                />
+
+                {/* 正文：· 引导，左对齐，浅金色，宽松行高 */}
+                <div
+                  className="w-full text-body leading-loose"
+                  style={{
+                    color: 'rgba(240,230,216,0.8)',
+                    textShadow: '0 0 6px rgba(201,169,110,0.08)',
+                  }}
+                >
+                  {displayContent
+                    .split(/\n\n+/)
+                    .filter((p) => p.trim())
+                    .map((paragraph, idx) => (
+                      <p key={idx} className="mb-3 flex gap-2">
+                        <span
+                          className="flex-shrink-0 select-none"
+                          style={{ color: 'rgba(201,169,110,0.5)' }}
+                        >
+                          ·
+                        </span>
+                        <span
+                          className="whitespace-pre-line"
+                          dangerouslySetInnerHTML={{
+                            __html: highlightCardNames(paragraph.trim(), cards),
+                          }}
+                        />
+                      </p>
+                    ))}
                 </div>
               </div>
             ) : (

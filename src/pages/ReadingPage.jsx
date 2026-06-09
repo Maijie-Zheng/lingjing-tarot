@@ -200,6 +200,43 @@ export default function ReadingPage() {
         transition={{ duration: 22, repeat: Infinity, ease: 'easeInOut' }}
       />
 
+      {/* ===== 金色星轨粒子环（P0-10 卡牌居中设计配套）===== */}
+      {status === 'ready' && (
+        <motion.div
+          className="fixed pointer-events-none left-1/2 rounded-full"
+          style={{
+            top: '50%',
+            width: 320,
+            height: 320,
+            marginLeft: -160,
+            marginTop: -200,
+            border: '1px solid rgba(201,169,110,0.08)',
+            zIndex: 0,
+          }}
+          animate={{ rotate: 360 }}
+          transition={{ duration: 30, repeat: Infinity, ease: 'linear' }}
+        >
+          {/* 环上 6 颗金色光点 */}
+          {[0, 60, 120, 180, 240, 300].map((angle) => (
+            <div
+              key={angle}
+              className="absolute rounded-full"
+              style={{
+                width: 3,
+                height: 3,
+                background: 'rgba(201,169,110,0.4)',
+                boxShadow: '0 0 8px rgba(201,169,110,0.3), 0 0 20px rgba(201,169,110,0.1)',
+                left: '50%',
+                top: 0,
+                marginLeft: -1.5,
+                marginTop: -1.5,
+                transform: `rotate(${angle}deg) translateY(-160px)`,
+              }}
+            />
+          ))}
+        </motion.div>
+      )}
+
       {/* ===== 顶栏 ===== */}
       <div className="flex items-center justify-between relative z-10">
         <button
