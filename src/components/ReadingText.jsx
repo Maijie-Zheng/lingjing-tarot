@@ -1,12 +1,13 @@
 import { useState, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import TarotCard from './TarotCard'
 
 /**
  * 解读文字逐段显示动画
- * 把 AI 返回的完整解读按段落拆分，逐段淡入
  *
  * Props:
  * - rawText: string — AI 返回的原始文本
+ * - cards: Array | null — 三张牌数据，传入后显示牌+文字配对布局
  * - speed: number — 每段间隔（ms），默认 800
  */
 
@@ -16,7 +17,6 @@ const SECTION_PATTERN = /(【[^】]+】)/g
 function parseSections(rawText) {
   if (!rawText) return []
 
-  // 按标题分割，保留标题
   const parts = rawText.split(SECTION_PATTERN).filter(Boolean)
 
   const sections = []
@@ -25,7 +25,6 @@ function parseSections(rawText) {
 
   for (const part of parts) {
     if (SECTION_PATTERN.test(part)) {
-      // 遇到新标题：先保存上一段
       if (currentContent.trim()) {
         sections.push({ title: currentTitle, content: currentContent.trim() })
       }
@@ -36,7 +35,6 @@ function parseSections(rawText) {
     }
   }
 
-  // 最后一段
   if (currentContent.trim()) {
     sections.push({ title: currentTitle, content: currentContent.trim() })
   }
@@ -44,20 +42,28 @@ function parseSections(rawText) {
   return sections
 }
 
-export default function ReadingText({ rawText = '', speed = 800 }) {
+/** 根据段落标题匹配对应的牌 */
+function matchCard(title, cards) {
+  if (!cards || !title) return null
+  return cards.find((card) => {
+    const cardName = card.name
+    const posLabel = card.position?.label
+    // 匹配 "过去 · 愚者" 或 "过去·愚者" 格式
+    return title.includes(cardName) || (posLabel && title.includes(posLabel))
+  }) || null
+}
+
+export default function ReadingText({ rawText = '', cards = null, speed = 800 }) {
   const sections = useMemo(() => parseSections(rawText), [rawText])
   const [visibleCount, setVisibleCount] = useState(0)
 
   useEffect(() => {
     if (sections.length === 0) return
 
-    // 重置
     setVisibleCount(0)
 
-    // 第一段立即显示
     const showFirst = setTimeout(() => setVisibleCount(1), 100)
 
-    // 后续段落逐段显示
     const timers = []
     for (let i = 1; i < sections.length; i++) {
       timers.push(
@@ -74,39 +80,71 @@ export default function ReadingText({ rawText = '', speed = 800 }) {
   if (!rawText) return null
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-5">
       <AnimatePresence>
-        {sections.slice(0, visibleCount).map((section, i) => (
-          <motion.div
-            key={i}
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, ease: 'easeOut' }}
-            className="flex flex-col gap-2"
-          >
-            {/* 段落标题 */}
-            {section.title && (
-              <h3 className="text-brand-gold text-lg font-serif font-semibold">
-                {section.title}
-              </h3>
-            )}
+        {sections.slice(0, visibleCount).map((section, i) => {
+          const card = cards ? matchCard(section.title, cards) : null
 
-            {/* 段落内容 */}
-            <div className="text-white/85 text-body leading-relaxed whitespace-pre-line">
-              {section.content}
-            </div>
+          return (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, ease: 'easeOut' }}
+            >
+              {/* ===== 有匹配牌面 → 图文并茂布局 ===== */}
+              {card ? (
+                <div className="flex gap-3">
+                  {/* 左侧牌面 */}
+                  <div className="flex-shrink-0">
+                    <TarotCard card={card} size="md" />
+                  </div>
 
-            {/* 分隔线（非最后一段） */}
-            {i < visibleCount - 1 && (
-              <div
-                className="h-px mt-2"
-                style={{
-                  background: 'linear-gradient(90deg, transparent, rgba(201,169,110,0.2), transparent)',
-                }}
-              />
-            )}
-          </motion.div>
-        ))}
+                  {/* 右侧文字 */}
+                  <div className="flex-1 min-w-0 flex flex-col gap-2">
+                    {/* 标题 */}
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-sm">{card.position?.emoji}</span>
+                      <h3 className="text-brand-gold text-base font-serif font-semibold">
+                        {card.position?.label} · {card.name}
+                      </h3>
+                      {card.isReversed && (
+                        <span className="text-xs text-red-400">逆位</span>
+                      )}
+                    </div>
+
+                    {/* 正文 */}
+                    <p className="text-white/85 text-body leading-relaxed">
+                      {section.content}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                /* ===== 无匹配牌面 → 全宽纯文字布局 ===== */
+                <div className="flex flex-col gap-2">
+                  {section.title && (
+                    <h3 className="text-brand-gold text-lg font-serif font-semibold">
+                      {section.title}
+                    </h3>
+                  )}
+                  <div className="text-white/85 text-body leading-relaxed whitespace-pre-line">
+                    {section.content}
+                  </div>
+                </div>
+              )}
+
+              {/* 分隔线（非最后一段） */}
+              {i < visibleCount - 1 && (
+                <div
+                  className="h-px mt-4"
+                  style={{
+                    background: 'linear-gradient(90deg, transparent, rgba(201,169,110,0.2), transparent)',
+                  }}
+                />
+              )}
+            </motion.div>
+          )
+        })}
       </AnimatePresence>
 
       {/* 打字中指示器 */}

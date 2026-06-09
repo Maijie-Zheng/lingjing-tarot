@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import TarotCard from '../components/TarotCard'
 import LoadingSpinner from '../components/LoadingSpinner'
 import ReadingText from '../components/ReadingText'
 import { getSystemPrompt, buildUserPrompt } from '../utils/promptBuilder'
@@ -139,33 +138,6 @@ export default function ReadingPage() {
         </div>
       )}
 
-      {/* 三张牌缩略图 */}
-      {hasValidData && (
-        <motion.div
-          className="flex justify-center gap-3 px-page"
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-        >
-          {cards.map((card, i) => (
-            <div key={i} className="flex flex-col items-center gap-2">
-              <TarotCard card={card} size="sm" />
-              <div className="text-center">
-                <span className="text-xs text-brand-gold">
-                  {card.position?.emoji} {card.position?.label}
-                </span>
-                {card.isReversed && (
-                  <span className="text-xs text-red-400 block">逆位</span>
-                )}
-              </div>
-            </div>
-          ))}
-        </motion.div>
-      )}
-
-      {/* 分隔线 */}
-      <div className="mx-page h-px" style={{ background: 'linear-gradient(90deg, transparent, rgba(201,169,110,0.3), transparent)' }} />
-
       {/* 内容区域 */}
       <div className="flex-1 px-page pb-6">
         {status === 'loading' && <LoadingSpinner visible />}
@@ -191,7 +163,11 @@ export default function ReadingPage() {
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5 }}
           >
-            <ReadingText rawText={readingText} speed={800} />
+            <ReadingText
+              rawText={readingText}
+              cards={hasValidData ? cards : null}
+              speed={800}
+            />
           </motion.div>
         )}
       </div>
