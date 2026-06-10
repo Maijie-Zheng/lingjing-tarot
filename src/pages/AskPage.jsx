@@ -56,7 +56,7 @@ export default function AskPage() {
   // 提交 → 洗牌页
   const handleSubmit = () => {
     if (!canSubmit) return;
-    navigate(`/shuffle?q=${encodeURIComponent(text.trim())}`);
+    navigate(`/meditate?q=${encodeURIComponent(text.trim())}`);
   };
 
   return (

@@ -5,6 +5,8 @@ import LandingPage from './pages/LandingPage'
 import AskPage from './pages/AskPage'
 import ShufflePage from './pages/ShufflePage'
 import ReadingPage from './pages/ReadingPage'
+import MeditatePage from './pages/MeditatePage'
+import DrawPage from './pages/DrawPage'
 import HistoryPage from './pages/HistoryPage'
 
 /**
@@ -59,7 +61,9 @@ export default function App() {
           <Routes location={location} key={location.pathname}>
             <Route path="/" element={<PageWrapper><LandingPage /></PageWrapper>} />
             <Route path="/ask" element={<PageWrapper><AskPage /></PageWrapper>} />
+            <Route path="/meditate" element={<PageWrapper><MeditatePage /></PageWrapper>} />
             <Route path="/shuffle" element={<PageWrapper><ShufflePage /></PageWrapper>} />
+            <Route path="/draw" element={<PageWrapper><DrawPage /></PageWrapper>} />
             <Route path="/reading" element={<PageWrapper><ReadingPage /></PageWrapper>} />
             <Route path="/history" element={<PageWrapper><HistoryPage /></PageWrapper>} />
           </Routes>
