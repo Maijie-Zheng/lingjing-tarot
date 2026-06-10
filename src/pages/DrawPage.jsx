@@ -1,74 +1,102 @@
 import { useState, useCallback, useEffect } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { ArrowLeft, Moon, Sparkles, Sun } from 'lucide-react';
 import TarotCard from '../components/TarotCard';
 import CardCarousel from '../components/CardCarousel';
-import tarotCards from '../data/tarotCards';
+import { buildDeck, POSITIONS } from '../lib/drawDeck';
 
-// 三张牌的位置定义
-const POSITIONS = [
-  { key: 'past',    label: '过去 · 溯源', emoji: '🌙' },
-  { key: 'present', label: '现在 · 当下', emoji: '✨' },
-  { key: 'future',  label: '未来 · 趋势', emoji: '🌟' },
-];
+// 位置图标映射
+const POS_ICONS = { Moon, Sparkles, Sun };
 
-// 进度文案（根据已选数量动态切换）
+// 进度文案（无 emoji——星形提示用内联 SVG 星芒）
 const PROGRESS_TEXTS = [
   '指尖轻滑，凭心指引，选出属于你的三张牌',
-  '🌙 第一张已感应，再选「现在 · 当下」',
-  '✨ 第二张已感应，最后选「未来 · 趋势」',
+  '第一张已感应，再选「现在 · 当下」',
+  '第二张已感应，最后选「未来 · 趋势」',
 ];
 
+/** 内联 8 角星芒 SVG（用于进度文案前缀，替代 emoji） */
+function StarSpark() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 64 64" className="inline-block flex-shrink-0" aria-hidden>
+      <path
+        d="M32,6 C33,28 36,31 58,32 C36,33 33,36 32,58 C31,36 28,33 6,32 C28,31 31,28 32,6 Z"
+        fill="#E6C982"
+      />
+    </svg>
+  );
+}
+
 /**
- * 选牌页 —— P3-3 新建
+ * 抽牌页 —— P3-4 升级
  *
- * 旧 ShufflePage 的 select 阶段搬迁至此。
- * 洗牌过渡已独立为 P3-3 新版 ShufflePage，本页直接进入选牌模式。
- * 视觉暂未做 Phase 3 升级（等后续设计文档）。
+ * 三处改动：
+ * 1. 去 emoji → lucide 金色细线图标 + 星芒 SVG
+ * 2. 真随机洗牌 + 50% 正逆位绑定 + 牌背绑定真身（点哪张抽哪张）
+ * 3. embla 环形无限循环轮播（22 张首尾相接）
+ *
+ * 保留全部既有视觉：景深缩放、星芒闪烁、3D 翻转、飞入卡槽、白屏过渡。
  */
 export default function DrawPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const question = searchParams.get('q') || '未提供问题';
 
-  const [selectedCards, setSelectedCards] = useState([]);
-  const [convergeSlot, setConvergeSlot] = useState(null);
+  // 进入页面只构建一次牌堆（Fisher–Yates 乱序 + 每张独立 50% 正逆位）
+  const [deck] = useState(() => buildDeck());
+
+  // remaining: 环中剩余牌的 deck 索引（初始全部 0-21，抽走一张就移除一个）
+  const [remaining, setRemaining] = useState(() => deck.map((_, i) => i));
+
+  // picks: 已抽到的牌（deck[deckIndex] 对象，按位置顺序）
+  const [picks, setPicks] = useState([]);
+
+  const [convergeSlot, setConvergeSlot] = useState(null); // 星点汇聚触发槽索引
   const [isTransitioning, setIsTransitioning] = useState(false);
 
-  // ===== 选中一张牌 =====
-  const handleSelectCard = useCallback((card) => {
-    setSelectedCards((prev) => {
-      if (prev.length >= 3) return prev;
-      const newCard = {
-        ...card,
-        position: POSITIONS[prev.length],
-        isReversed: Math.random() < 0.5,
-      };
-      setConvergeSlot(prev.length);
+  // ===== 用户点中轮播中央那张 → 拿到 deck[deckIndex] 绑定的真身 =====
+  const pickCard = useCallback(
+    (deckIndex) => {
+      if (picks.length >= 3) return;
+      const card = deck[deckIndex];
+      if (!card) return;
+      const slotIdx = picks.length; // 当前是第几张（0/1/2）
+      setPicks((prev) => [...prev, card]);
+      setRemaining((prev) => prev.filter((i) => i !== deckIndex));
+      // 触发星点汇聚动画
+      setConvergeSlot(slotIdx);
       setTimeout(() => setConvergeSlot(null), 500);
-      return [...prev, newCard];
-    });
-  }, []);
+    },
+    [picks.length, deck],
+  );
 
   // ===== 选满 3 张 → 星光过渡 → 跳转解读页 =====
   useEffect(() => {
-    if (selectedCards.length < 3) return;
+    if (picks.length < 3) return;
     const timer = setTimeout(() => {
       setIsTransitioning(true);
       setTimeout(() => {
         navigate('/reading', {
-          state: { question, cards: selectedCards },
+          state: {
+            question,
+            cards: picks.map((card, i) => ({
+              ...card,
+              position: POSITIONS[i],
+            })),
+          },
         });
       }, 600);
     }, 800);
     return () => clearTimeout(timer);
-  }, [selectedCards.length, selectedCards, question, navigate]);
+  }, [picks.length, picks, question, navigate]);
 
-  // ===== 槽位配置 =====
+  // ===== 槽位配置（结合 picks + POSITIONS）=====
   const slotConfigs = POSITIONS.map((pos, i) => {
-    const card = selectedCards[i];
+    const card = picks[i] ?? null;
     const isConverging = convergeSlot === i;
-    return { ...pos, card, index: i, isConverging };
+    const IconComp = POS_ICONS[pos.icon];
+    return { ...pos, card, index: i, isConverging, IconComp };
   });
 
   return (
@@ -77,12 +105,13 @@ export default function DrawPage() {
       <div className="flex items-center justify-between">
         <Link
           to="/ask"
-          className="text-sm transition-colors"
+          className="flex items-center gap-1 text-sm transition-colors"
           style={{ color: 'rgba(201,169,110,0.7)' }}
           onMouseEnter={(e) => (e.target.style.color = '#c9a96e')}
           onMouseLeave={(e) => (e.target.style.color = 'rgba(201,169,110,0.7)')}
         >
-          &larr; 换问题
+          <ArrowLeft size={16} strokeWidth={1.6} />
+          换问题
         </Link>
       </div>
 
@@ -113,37 +142,40 @@ export default function DrawPage() {
         {/* 进度引导文字 */}
         <div className="text-center min-h-[40px] flex flex-col justify-center">
           <AnimatePresence mode="wait">
-            {selectedCards.length < 3 ? (
+            {picks.length < 3 ? (
               <motion.p
-                key={`progress-${selectedCards.length}`}
-                className="text-white/60 text-sm"
+                key={`progress-${picks.length}`}
+                className="text-white/60 text-sm flex items-center justify-center gap-1.5"
                 initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -6 }}
                 transition={{ duration: 0.25 }}
               >
-                {PROGRESS_TEXTS[selectedCards.length]}
+                {picks.length > 0 && <StarSpark />}
+                {PROGRESS_TEXTS[picks.length]}
               </motion.p>
             ) : (
               <motion.p
                 key="complete"
-                className="text-brand-gold text-sm"
+                className="text-brand-gold text-sm flex items-center justify-center gap-1.5"
                 initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3 }}
               >
-                🌟 三张已齐聚，命运之牌已揭示...
+                <StarSpark />
+                三张已齐聚，命运之牌已揭示...
               </motion.p>
             )}
           </AnimatePresence>
         </div>
 
-        {/* 牌轮播 */}
+        {/* 牌轮播：ember 环形无限循环 + CardBack 绑定真身 */}
         <div className="flex-1 flex items-center -mx-page">
           <CardCarousel
-            cards={tarotCards}
-            selectedCards={selectedCards}
-            onSelect={handleSelectCard}
+            deck={deck}
+            remaining={remaining}
+            onSelect={pickCard}
+            pickCount={picks.length}
             maxSelect={3}
           />
         </div>
@@ -151,12 +183,12 @@ export default function DrawPage() {
         {/* 底部：已选卡槽 */}
         <div className="flex justify-center gap-3 pb-2">
           {slotConfigs.map((slot) => {
-            const { card, emoji, label, index, isConverging } = slot;
+            const { card, label, index, isConverging, key, IconComp } = slot;
             const isFilled = !!card;
 
             return (
               <motion.div
-                key={POSITIONS[index].key}
+                key={key}
                 className="flex flex-col items-center gap-1.5"
                 layout
               >
@@ -188,7 +220,11 @@ export default function DrawPage() {
                       <TarotCard card={card} fill />
                     </motion.div>
                   ) : (
-                    <span className="text-white/12 text-lg">{emoji}</span>
+                    <IconComp
+                      size={28}
+                      strokeWidth={1.6}
+                      className="text-white/12"
+                    />
                   )}
 
                   {/* 星点汇聚效果 */}
@@ -239,7 +275,7 @@ export default function DrawPage() {
 
         {/* 选满提示 */}
         <AnimatePresence>
-          {selectedCards.length === 3 && !isTransitioning && (
+          {picks.length === 3 && !isTransitioning && (
             <motion.p
               className="text-center text-brand-gold text-xs -mt-1"
               initial={{ opacity: 0, y: 4 }}
