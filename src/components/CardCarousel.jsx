@@ -49,16 +49,26 @@ export default function CardCarousel({
     };
   }, [emblaApi]);
 
-  // ===== 松手后磁吸：dragFree 模式下滑动自由，settle 后手动吸附到最近中心牌 =====
+  // ===== 松手后磁吸：dragFree 模式滑动自由，手指抬起后延迟吸附到最近中心牌 =====
   useEffect(() => {
     if (!emblaApi) return;
-    const onSettle = () => {
-      const snapIdx = emblaApi.selectedScrollSnap();
-      emblaApi.scrollTo(snapIdx);
+    let snapTimer = null;
+
+    const onPointerUp = () => {
+      // 仅拖拽（非点击）时触发吸附
+      if (emblaApi.clickAllowed()) return;
+      clearTimeout(snapTimer);
+      snapTimer = setTimeout(() => {
+        if (!emblaApi) return;
+        const snapIdx = emblaApi.selectedScrollSnap();
+        emblaApi.scrollTo(snapIdx);
+      }, 100); // 100ms 等惯性消退，然后磁吸到位
     };
-    emblaApi.on('settle', onSettle);
+
+    emblaApi.on('pointerUp', onPointerUp);
     return () => {
-      emblaApi.off('settle', onSettle);
+      emblaApi.off('pointerUp', onPointerUp);
+      clearTimeout(snapTimer);
     };
   }, [emblaApi]);
 
