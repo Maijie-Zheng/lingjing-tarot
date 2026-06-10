@@ -26,8 +26,7 @@ export default function CardCarousel({
 }) {
   const [emblaRef, emblaApi] = useEmblaCarousel({
     loop: true,
-    align: 'center',
-    dragFree: true,       // 手指滑动跟手比例移动，松手后吸附到最近卡片——比 slidesToScroll:1 丝滑得多
+    align: 'center',      // 牌滑到中间自动磁吸——"锁定"的手感
     dragThreshold: 4,     // 降低拖拽触发阈值（默认 10），轻触即可滑动
     duration: 30,         // 吸附动画稍长一点，不突兀
   });
@@ -216,6 +215,30 @@ export default function CardCarousel({
                       showStar={isCenter && !isFull && showGuide}
                       className="h-full w-full rounded-card"
                     />
+                    {/* 中心锁定框 —— 金色细线"瞄准镜"，牌滑到中间时出现 */}
+                    {isCenter && !isFull && !isFlipping && (
+                      <motion.div
+                        className="absolute inset-0 rounded-card pointer-events-none"
+                        style={{
+                          border: '1.5px solid rgba(201,169,110,0.5)',
+                          boxShadow:
+                            '0 0 18px rgba(201,169,110,0.15), inset 0 0 22px rgba(201,169,110,0.06)',
+                        }}
+                        initial={{ opacity: 0, borderColor: 'rgba(201,169,110,0.2)' }}
+                        animate={{
+                          opacity: [0.5, 1, 0.5],
+                          borderColor: [
+                            'rgba(201,169,110,0.35)',
+                            'rgba(201,169,110,0.6)',
+                            'rgba(201,169,110,0.35)',
+                          ],
+                        }}
+                        transition={{
+                          opacity: { duration: 2, repeat: Infinity, ease: 'easeInOut' },
+                          borderColor: { duration: 2, repeat: Infinity, ease: 'easeInOut' },
+                        }}
+                      />
+                    )}
                   </div>
 
                   {/* 正面：TarotCard（翻转后揭示真身） */}
