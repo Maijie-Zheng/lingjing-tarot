@@ -26,9 +26,10 @@ export default function CardCarousel({
 }) {
   const [emblaRef, emblaApi] = useEmblaCarousel({
     loop: true,
-    align: 'center',      // 牌滑到中间自动磁吸——"锁定"的手感
-    dragThreshold: 4,     // 降低拖拽触发阈值（默认 10），轻触即可滑动
-    duration: 30,         // 吸附动画稍长一点，不突兀
+    align: 'center',      // 松手后磁吸到最近的牌
+    dragFree: true,       // 滑动时自由跟手，不受单步限制——一次手势可掠过数张
+    dragThreshold: 4,
+    duration: 35,         // 磁吸动画稍舒缓
   });
   const [centerIndex, setCenterIndex] = useState(0);
   const [flippingDeckIdx, setFlippingDeckIdx] = useState(null); // 正在翻转的牌 deckIndex
@@ -45,6 +46,19 @@ export default function CardCarousel({
     onSelect();
     return () => {
       emblaApi.off('select', onSelect);
+    };
+  }, [emblaApi]);
+
+  // ===== 松手后磁吸：dragFree 模式下滑动自由，settle 后手动吸附到最近中心牌 =====
+  useEffect(() => {
+    if (!emblaApi) return;
+    const onSettle = () => {
+      const snapIdx = emblaApi.selectedScrollSnap();
+      emblaApi.scrollTo(snapIdx);
+    };
+    emblaApi.on('settle', onSettle);
+    return () => {
+      emblaApi.off('settle', onSettle);
     };
   }, [emblaApi]);
 
