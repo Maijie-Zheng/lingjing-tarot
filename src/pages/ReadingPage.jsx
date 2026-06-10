@@ -91,7 +91,7 @@ export default function ReadingPage() {
   // ===== 分享 =====
   const handleShare = async () => {
     try {
-      const canvas = generateShareCanvas({ question, cards, reading: readingRef.current })
+      const canvas = await generateShareCanvas({ question, cards, reading: readingRef.current })
       const dataURL = canvasToDataURL(canvas)
 
       if (isWeChat()) {
@@ -116,7 +116,7 @@ export default function ReadingPage() {
     } catch (err) {
       if (err.name === 'AbortError') return
       try {
-        const canvas = generateShareCanvas({ question, cards, reading: readingRef.current })
+        const canvas = await generateShareCanvas({ question, cards, reading: readingRef.current })
         downloadImage(canvasToDataURL(canvas))
       } catch {
         // 静默失败

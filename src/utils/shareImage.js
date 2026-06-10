@@ -1,56 +1,92 @@
 /**
- * Canvas 分享卡片生成
+ * Canvas 分享卡片生成 —— P0-12 重写
+ *
  * 尺寸：750×1334（3:4 竖版，适合微信/朋友圈/小红书）
  *
- * 布局结构：
- * ┌────────────────────┐
- * │  ✨ 星空背景         │
- * │  🃏  🃏  🃏       │
- * │  过去 现在 未来     │
- * │  "关于「问题」..."   │
- * │  💬 精选解读片段     │
- * │  ───── ✨ ─────    │
- * │  灵 境             │
- * │  AI 塔罗 · 心灵之境 │
- * └────────────────────┘
+ * 改动：
+ * - 真实韦特塔罗牌面图片（异步加载，非文字占位）
+ * - 新标语"解锁灵境，让心事都有回响"
+ * - 精选片段智能提取：优先【整体叙事】→ 情感关键词打分 → 问题关键词加权
+ * - 移除虚假二维码占位，品牌收尾干净利落
+ * - 壁纸级视觉：星云光斑 + 金色光晕牌面 + 渐变遮罩
  */
 
 const WIDTH = 750
 const HEIGHT = 1334
-const PADDING = 40
+const PADDING = 48
 
-// 星空粒子预生成
+// ===== 情感关键词（精选片段打分用）=====
+const EMOTION_KEYWORDS = [
+  '内心', '感受', '情感', '渴望', '迷茫', '焦虑', '期待',
+  '爱', '孤独', '勇气', '恐惧', '希望', '成长', '改变',
+  '放下', '面对', '选择', '答案', '方向', '未来', '过去',
+  '自己', '他人', '关系', '工作', '生活', '梦想', '坚持',
+  '治愈', '疗愈', '自由', '力量', '相信', '接纳', '放手',
+  '沉默', '等待', '答案', '真正', '其实', '有时候',
+]
+
+const FILLER_WORDS = ['让我们', '接下来', '首先', '最后', '综上所述', '请注意', '开始解读', '亲爱的']
+
+// ===== 星空背景 + 星云光斑 =====
 function drawStarryBackground(ctx) {
-  // 深紫渐变背景
+  // 深紫渐变
   const gradient = ctx.createLinearGradient(0, 0, 0, HEIGHT)
   gradient.addColorStop(0, '#1a0a2e')
+  gradient.addColorStop(0.4, '#150830')
   gradient.addColorStop(1, '#0d0221')
   ctx.fillStyle = gradient
   ctx.fillRect(0, 0, WIDTH, HEIGHT)
 
-  // 星空粒子（固定种子，保证每次生成一致）
+  // 星云光斑（大尺寸径向渐变，微弱彩色）
+  const nebulas = [
+    { x: WIDTH * 0.2, y: HEIGHT * 0.25, r: 280, color: 'rgba(139,92,246,0.03)' },
+    { x: WIDTH * 0.75, y: HEIGHT * 0.55, r: 320, color: 'rgba(201,169,110,0.02)' },
+    { x: WIDTH * 0.3, y: HEIGHT * 0.8, r: 260, color: 'rgba(139,92,246,0.025)' },
+  ]
+  nebulas.forEach(({ x, y, r, color }) => {
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r)
+    g.addColorStop(0, color)
+    g.addColorStop(1, 'transparent')
+    ctx.fillStyle = g
+    ctx.fillRect(0, 0, WIDTH, HEIGHT)
+  })
+
+  // 星空粒子
   const stars = []
-  for (let i = 0; i < 80; i++) {
+  for (let i = 0; i < 120; i++) {
     const seed = (i * 137.508 + 42) % 1000 / 1000
     stars.push({
       x: seed * WIDTH,
       y: ((i * 271.828 + 31) % 1000) / 1000 * HEIGHT,
-      r: ((i * 314.159 + 7) % 1000) / 1000 * 2 + 0.5,
-      opacity: ((i * 161.803 + 13) % 1000) / 1000 * 0.5 + 0.3,
-      isGold: i % 5 !== 0, // 80% 金色，20% 白色
+      r: ((i * 314.159 + 7) % 1000) / 1000 * 2.5 + 0.3,
+      opacity: ((i * 161.803 + 13) % 1000) / 1000 * 0.6 + 0.2,
+      isGold: i % 6 !== 0,
     })
   }
 
   stars.forEach(({ x, y, r, opacity, isGold }) => {
     ctx.beginPath()
     ctx.arc(x, y, r, 0, Math.PI * 2)
-    const color = isGold ? `rgba(201,169,110,${opacity})` : `rgba(255,255,255,${opacity * 0.8})`
+    const color = isGold
+      ? `rgba(201,169,110,${opacity})`
+      : `rgba(255,255,255,${opacity * 0.7})`
     ctx.fillStyle = color
     ctx.fill()
+
+    // 稍亮的星加光晕
+    if (r > 1.8) {
+      ctx.beginPath()
+      ctx.arc(x, y, r * 2.5, 0, Math.PI * 2)
+      const glow = ctx.createRadialGradient(x, y, 0, x, y, r * 2.5)
+      glow.addColorStop(0, color)
+      glow.addColorStop(1, 'transparent')
+      ctx.fillStyle = glow
+      ctx.fill()
+    }
   })
 }
 
-// 绘制圆角矩形
+// ===== 圆角矩形路径 =====
 function roundRect(ctx, x, y, w, h, r) {
   ctx.beginPath()
   ctx.moveTo(x + r, y)
@@ -65,7 +101,7 @@ function roundRect(ctx, x, y, w, h, r) {
   ctx.closePath()
 }
 
-// 文字换行
+// ===== 文字换行 =====
 function wrapText(ctx, text, maxWidth) {
   const lines = []
   for (const paragraph of text.split('\n')) {
@@ -88,185 +124,375 @@ function wrapText(ctx, text, maxWidth) {
   return lines
 }
 
-/**
- * 提取解读中最戳心的 2-3 句（作为精选片段）
- */
-function extractHighlights(readingText) {
-  if (!readingText) return ['牌面已揭示你的答案...']
+// ===== 异步加载牌面图片 =====
+function loadCardImages(cards) {
+  return Promise.all(
+    cards.map((card) => {
+      return new Promise((resolve) => {
+        if (!card?.image) {
+          resolve(null)
+          return
+        }
+        const img = new Image()
+        img.crossOrigin = 'anonymous'
+        img.onload = () => resolve(img)
+        img.onerror = () => resolve(null)
+        img.src = card.image
+      })
+    })
+  )
+}
 
-  // 按句子拆分
-  const sentences = readingText
-    .replace(/\n/g, '。')
+// ===== 从问题中提取关键词 =====
+function extractQuestionKeywords(question) {
+  if (!question) return []
+  // 简单分词：取2字及以上的片段
+  const words = []
+  // 去掉常见停用词
+  const cleaned = question.replace(/[？?！!。，,、\s]/g, '')
+  for (let i = 0; i < cleaned.length - 1; i++) {
+    const word = cleaned.slice(i, i + 2)
+    if (!['什么', '怎么', '为什么', '是不是', '有没有', '能不能', '可以', '还是'].includes(word)) {
+      words.push(word)
+    }
+  }
+  return [...new Set(words)]
+}
+
+// ===== 句子打分 =====
+function scoreSentence(sentence, questionKeywords) {
+  let score = 0
+
+  // 长度适中（15-60 字最适合引用）
+  const len = sentence.length
+  if (len >= 15 && len <= 60) score += 4
+  else if (len >= 10 && len <= 80) score += 1
+  else if (len < 6) score -= 3
+
+  // 情感关键词匹配
+  for (const kw of EMOTION_KEYWORDS) {
+    if (sentence.includes(kw)) score += 2
+  }
+
+  // 问题关键词匹配（额外加权——让用户觉得"说的是我"）
+  if (questionKeywords) {
+    for (const kw of questionKeywords) {
+      if (sentence.includes(kw)) score += 3
+    }
+  }
+
+  // 过渡句/客套话扣分
+  for (const fw of FILLER_WORDS) {
+    if (sentence.includes(fw)) score -= 6
+  }
+
+  // 有引号/括号/问号的句子不适合引用，轻微扣分
+  if (sentence.includes('【') || sentence.includes('】')) score -= 4
+
+  return score
+}
+
+// ===== 智能提取精选片段 =====
+function extractHighlights(readingText, question) {
+  if (!readingText) return ['牌面已揭示你的答案…']
+
+  const questionKeywords = extractQuestionKeywords(question)
+
+  // 1) 优先从【整体叙事】提取
+  const narrativeMatch = readingText.match(/【整体叙事】([\s\S]*?)(?=【|$)/)
+
+  // 2) 如果没有整体叙事，尝试从三张牌各取一句
+  const sourceText = narrativeMatch ? narrativeMatch[1] : readingText
+
+  // 3) 拆分为句子
+  const sentences = sourceText
+    .replace(/\n+/g, '。')
+    .replace(/\*\*/g, '')
+    .replace(/#{1,6}\s*/g, '')
     .split(/[。！？；]/)
     .map((s) => s.trim())
-    .filter((s) => s.length > 8 && s.length < 80)
+    .filter((s) => s.length >= 6)
 
-  // 简单策略：取中间段落的句子，通常更有内容
-  if (sentences.length <= 3) return sentences
+  // 4) 打分排序
+  const scored = sentences
+    .map((text) => ({ text, score: scoreSentence(text, questionKeywords) }))
+    .sort((a, b) => b.score - a.score)
 
-  const start = Math.floor(sentences.length * 0.3)
-  const highlights = sentences.slice(start, start + 4)
-  return highlights.slice(0, 3)
+  // 5) 去重（相似度 > 80% 的只保留高分那条）
+  const deduped = []
+  for (const item of scored) {
+    const isDuplicate = deduped.some(
+      (d) => similarity(d.text, item.text) > 0.7
+    )
+    if (!isDuplicate) deduped.push(item)
+  }
+
+  // 6) 取前 3 句，只要分数 > 0 的
+  const highlights = deduped
+    .filter((s) => s.score > 0)
+    .slice(0, 3)
+    .map((s) => s.text)
+
+  if (highlights.length === 0) {
+    // 兜底：取 readingText 前 60 字
+    const fallback = readingText.replace(/[【】#*\n]/g, '').slice(0, 60).trim()
+    return fallback ? [fallback] : ['牌面已揭示你的答案…']
+  }
+
+  return highlights
+}
+
+// ===== 简单字符串相似度（去重用）=====
+function similarity(a, b) {
+  if (!a || !b) return 0
+  const shorter = a.length < b.length ? a : b
+  const longer = a.length < b.length ? b : a
+  let matches = 0
+  for (let i = 0; i < shorter.length - 1; i++) {
+    const bigram = shorter.slice(i, i + 2)
+    if (longer.includes(bigram)) matches++
+  }
+  return matches / (shorter.length - 1)
+}
+
+// ===== 绘制金色渐变分隔线 =====
+function drawGoldDivider(ctx, y) {
+  const divWidth = WIDTH * 0.4
+  const divX = (WIDTH - divWidth) / 2
+  const divGrad = ctx.createLinearGradient(divX, y, divX + divWidth, y)
+  divGrad.addColorStop(0, 'rgba(201,169,110,0)')
+  divGrad.addColorStop(0.3, 'rgba(201,169,110,0.25)')
+  divGrad.addColorStop(0.5, 'rgba(201,169,110,0.35)')
+  divGrad.addColorStop(0.7, 'rgba(201,169,110,0.25)')
+  divGrad.addColorStop(1, 'rgba(201,169,110,0)')
+  ctx.strokeStyle = divGrad
+  ctx.lineWidth = 1
+  ctx.beginPath()
+  ctx.moveTo(divX, y)
+  ctx.lineTo(divX + divWidth, y)
+  ctx.stroke()
 }
 
 /**
- * 生成分享卡片 Canvas
+ * 生成分享卡片 Canvas（异步——需要加载牌面图片）
  * @param {object} data - { question, cards, reading }
- * @returns {HTMLCanvasElement}
+ * @returns {Promise<HTMLCanvasElement>}
  */
-export function generateShareCanvas({ question, cards, reading }) {
+export async function generateShareCanvas({ question, cards, reading }) {
   const canvas = document.createElement('canvas')
   canvas.width = WIDTH
   canvas.height = HEIGHT
   const ctx = canvas.getContext('2d')
 
-  // ===== 1. 背景 =====
+  // ===== 1. 星空背景 =====
   drawStarryBackground(ctx)
 
-  // ===== 2. 标题区域 =====
-  let y = 80
+  // ===== 2. 加载牌面图片 =====
+  const cardImages = cards ? await loadCardImages(cards) : [null, null, null]
+
+  // ========================================
+  // ===== 3. 头部品牌区 =====
+  // ========================================
+  let y = 85
 
   ctx.fillStyle = '#c9a96e'
   ctx.font = 'bold 48px "Noto Serif SC", serif'
   ctx.textAlign = 'center'
+  ctx.shadowColor = 'rgba(201,169,110,0.2)'
+  ctx.shadowBlur = 16
   ctx.fillText('灵 境', WIDTH / 2, y)
+  ctx.shadowColor = 'transparent'
+  ctx.shadowBlur = 0
 
-  y += 44
-  ctx.fillStyle = 'rgba(255,255,255,0.5)'
-  ctx.font = '22px "PingFang SC", "Noto Sans SC", sans-serif'
-  ctx.fillText('AI 塔罗 · 心灵之境', WIDTH / 2, y)
+  y += 46
+  ctx.fillStyle = 'rgba(255,255,255,0.55)'
+  ctx.font = '20px "PingFang SC", "Noto Sans SC", sans-serif'
+  ctx.fillText('解锁灵境，让心事都有回响', WIDTH / 2, y)
 
-  // ===== 3. 问题 =====
-  y += 70
-  ctx.fillStyle = 'rgba(255,255,255,0.35)'
-  ctx.font = '20px "PingFang SC", sans-serif'
+  // 分隔线
+  y += 32
+  drawGoldDivider(ctx, y)
+
+  // ===== 4. 问题 =====
+  y += 52
+  ctx.fillStyle = 'rgba(255,255,255,0.3)'
+  ctx.font = '17px "PingFang SC", sans-serif'
   ctx.fillText('关于', WIDTH / 2, y)
 
-  y += 40
-  ctx.fillStyle = 'rgba(255,255,255,0.9)'
-  ctx.font = '28px "Noto Serif SC", serif'
-  const qText = question.length > 20 ? question.slice(0, 20) + '...' : question
+  y += 36
+  ctx.fillStyle = 'rgba(255,255,255,0.88)'
+  ctx.font = '24px "Noto Serif SC", serif'
+  const qText = question && question.length > 22
+    ? question.slice(0, 22) + '…'
+    : (question || '')
   ctx.fillText(`「${qText}」`, WIDTH / 2, y)
 
-  // ===== 4. 三张牌 =====
-  y += 80
-  const cardWidth = 100
-  const cardHeight = 150
-  const cardGap = 30
+  // ========================================
+  // ===== 5. 三张真实牌面 =====
+  // ========================================
+  y += 65
+  const cardWidth = 130
+  const cardHeight = 195
+  const cardGap = 36
   const totalCardsWidth = cardWidth * 3 + cardGap * 2
   const cardStartX = (WIDTH - totalCardsWidth) / 2
 
   const posLabels = ['过去', '现在', '未来']
-  const posEmojis = ['🌙', '✨', '🔮']
+  const posEmojis = ['🌙', '✨', '🌟']
 
   for (let i = 0; i < 3; i++) {
     const cx = cardStartX + i * (cardWidth + cardGap)
-    const card = cards[i]
+    const card = cards?.[i]
+    const img = cardImages[i]
     const isReversed = card?.isReversed
 
-    // 牌面背景
-    roundRect(ctx, cx, y, cardWidth, cardHeight, 12)
-    const cardGrad = ctx.createLinearGradient(cx, y, cx + cardWidth, y + cardHeight)
-    cardGrad.addColorStop(0, '#1e1050')
-    cardGrad.addColorStop(1, '#0d1b3e')
-    ctx.fillStyle = cardGrad
+    // 金色光晕底
+    ctx.save()
+    roundRect(ctx, cx - 4, y - 4, cardWidth + 8, cardHeight + 8, 14)
+    ctx.fillStyle = 'rgba(201,169,110,0.06)'
+    ctx.shadowColor = 'rgba(201,169,110,0.45)'
+    ctx.shadowBlur = 28
     ctx.fill()
+    ctx.fill()
+    ctx.restore()
 
-    // 边框
-    ctx.strokeStyle = 'rgba(201,169,110,0.4)'
-    ctx.lineWidth = 2
-    ctx.stroke()
+    if (img) {
+      // 圆角裁剪 + 绘制牌面
+      ctx.save()
+      roundRect(ctx, cx, y, cardWidth, cardHeight, 10)
+      ctx.clip()
 
-    // 牌名
-    ctx.fillStyle = '#c9a96e'
-    ctx.font = 'bold 18px "Noto Serif SC", serif'
-    ctx.textAlign = 'center'
-    ctx.fillText(card?.name || '?', cx + cardWidth / 2, y + cardHeight / 2 - 4)
+      if (isReversed) {
+        // 逆位：旋转 180°
+        ctx.translate(cx + cardWidth / 2, y + cardHeight / 2)
+        ctx.rotate(Math.PI)
+        ctx.drawImage(img, -cardWidth / 2, -cardHeight / 2, cardWidth, cardHeight)
+      } else {
+        ctx.drawImage(img, cx, y, cardWidth, cardHeight)
+      }
+      ctx.restore()
 
-    // 逆位标签
-    if (isReversed) {
-      ctx.fillStyle = '#ef4444'
-      ctx.font = '14px "PingFang SC", sans-serif'
-      ctx.fillText('逆位', cx + cardWidth / 2, y + cardHeight / 2 + 26)
+      // 金色边框
+      ctx.strokeStyle = 'rgba(201,169,110,0.45)'
+      ctx.lineWidth = 2
+      roundRect(ctx, cx, y, cardWidth, cardHeight, 10)
+      ctx.stroke()
+
+      // 逆位标签（金色胶囊，牌面右上角）
+      if (isReversed) {
+        const tagW = 40
+        const tagH = 22
+        const tagX = cx + cardWidth - tagW - 6
+        const tagY = y + 6
+        roundRect(ctx, tagX, tagY, tagW, tagH, 11)
+        ctx.fillStyle = 'rgba(201,169,110,0.2)'
+        ctx.fill()
+        ctx.strokeStyle = 'rgba(201,169,110,0.5)'
+        ctx.lineWidth = 1
+        ctx.stroke()
+        ctx.fillStyle = '#c9a96e'
+        ctx.font = '12px "PingFang SC", sans-serif'
+        ctx.textAlign = 'center'
+        ctx.fillText('逆位', tagX + tagW / 2, tagY + tagH / 2 + 4)
+      }
+    } else {
+      // 兜底：渐变矩形 + 牌名
+      roundRect(ctx, cx, y, cardWidth, cardHeight, 10)
+      const cardGrad = ctx.createLinearGradient(cx, y, cx + cardWidth, y + cardHeight)
+      cardGrad.addColorStop(0, '#1e1050')
+      cardGrad.addColorStop(1, '#0d1b3e')
+      ctx.fillStyle = cardGrad
+      ctx.fill()
+
+      ctx.strokeStyle = 'rgba(201,169,110,0.35)'
+      ctx.lineWidth = 2
+      ctx.stroke()
+
+      ctx.fillStyle = '#c9a96e'
+      ctx.font = 'bold 16px "Noto Serif SC", serif'
+      ctx.textAlign = 'center'
+      ctx.fillText(card?.name || '?', cx + cardWidth / 2, y + cardHeight / 2)
+
+      if (isReversed) {
+        ctx.fillStyle = 'rgba(201,169,110,0.7)'
+        ctx.font = '13px "PingFang SC", sans-serif'
+        ctx.fillText('逆位', cx + cardWidth / 2, y + cardHeight / 2 + 24)
+      }
     }
 
     // 位置标签
-    ctx.fillStyle = 'rgba(255,255,255,0.6)'
-    ctx.font = '18px "PingFang SC", sans-serif'
-    ctx.fillText(`${posEmojis[i]} ${posLabels[i]}`, cx + cardWidth / 2, y + cardHeight + 28)
+    ctx.fillStyle = 'rgba(255,255,255,0.55)'
+    ctx.font = '17px "PingFang SC", sans-serif'
+    ctx.textAlign = 'center'
+    ctx.fillText(`${posEmojis[i]} ${posLabels[i]}`, cx + cardWidth / 2, y + cardHeight + 32)
   }
 
-  // ===== 5. 精选解读片段 =====
-  y += cardHeight + 70
-  const highlights = extractHighlights(reading)
+  // ========================================
+  // ===== 6. 精选解读片段 =====
+  // ========================================
+  y += cardHeight + 72
+  const highlights = extractHighlights(reading, question)
 
-  // 分隔线
-  ctx.strokeStyle = 'rgba(201,169,110,0.25)'
-  ctx.lineWidth = 1
-  ctx.beginPath()
-  ctx.moveTo(WIDTH * 0.2, y)
-  ctx.lineTo(WIDTH * 0.8, y)
-  ctx.stroke()
+  drawGoldDivider(ctx, y)
 
-  y += 50
-  ctx.fillStyle = 'rgba(255,255,255,0.5)'
-  ctx.font = '20px "PingFang SC", sans-serif'
+  y += 42
+  ctx.fillStyle = 'rgba(255,255,255,0.45)'
+  ctx.font = '17px "PingFang SC", sans-serif'
   ctx.textAlign = 'center'
-  ctx.fillText('💬 牌面这样说', WIDTH / 2, y)
+  ctx.fillText('牌面这样说', WIDTH / 2, y)
 
-  y += 50
-  ctx.fillStyle = 'rgba(255,255,255,0.85)'
-  ctx.font = '24px/1.6 "Noto Serif SC", serif'
+  y += 42
+  ctx.fillStyle = 'rgba(255,255,255,0.82)'
+  ctx.font = '22px/1.75 "Noto Serif SC", serif'
   ctx.textAlign = 'center'
 
   for (const highlight of highlights) {
-    const lines = wrapText(ctx, `"${highlight}"`, WIDTH - PADDING * 4)
+    const quoteText = `"${highlight}"`
+    const lines = wrapText(ctx, quoteText, WIDTH - PADDING * 3.5)
     for (const line of lines) {
-      if (y > HEIGHT - 280) break // 超出范围停止
+      if (y > HEIGHT - 250) break
       ctx.fillText(line, WIDTH / 2, y)
-      y += 38
+      y += 35
     }
-    y += 18
+    y += 12
   }
 
-  // ===== 6. 品牌底部 =====
-  const footerY = HEIGHT - 180
+  // ========================================
+  // ===== 7. 品牌底部 =====
+  // ========================================
+  const footerStartY = Math.max(y + 30, HEIGHT - 190)
 
-  // 底部渐变遮罩
-  const footerGrad = ctx.createLinearGradient(0, footerY - 40, 0, HEIGHT)
+  // 底部渐变遮罩（让底部文字更清晰）
+  const footerGrad = ctx.createLinearGradient(0, footerStartY - 60, 0, HEIGHT)
   footerGrad.addColorStop(0, 'rgba(13,2,33,0)')
-  footerGrad.addColorStop(0.5, 'rgba(13,2,33,0.9)')
+  footerGrad.addColorStop(0.6, 'rgba(13,2,33,0.85)')
   ctx.fillStyle = footerGrad
-  ctx.fillRect(0, footerY - 40, WIDTH, HEIGHT - footerY + 40)
+  ctx.fillRect(0, footerStartY - 60, WIDTH, HEIGHT - footerStartY + 60)
 
   // 分隔线
-  ctx.strokeStyle = 'rgba(201,169,110,0.3)'
-  ctx.lineWidth = 1
-  ctx.beginPath()
-  ctx.moveTo(WIDTH * 0.2, footerY)
-  ctx.lineTo(WIDTH * 0.8, footerY)
-  ctx.stroke()
+  const dividerY = footerStartY + 15
+  drawGoldDivider(ctx, dividerY)
 
-  // 品牌
+  // 品牌名
   ctx.fillStyle = '#c9a96e'
-  ctx.font = 'bold 36px "Noto Serif SC", serif'
+  ctx.font = 'bold 40px "Noto Serif SC", serif'
   ctx.textAlign = 'center'
-  ctx.fillText('灵 境', WIDTH / 2, footerY + 60)
+  ctx.shadowColor = 'rgba(201,169,110,0.15)'
+  ctx.shadowBlur = 12
+  ctx.fillText('灵 境', WIDTH / 2, dividerY + 60)
+  ctx.shadowColor = 'transparent'
+  ctx.shadowBlur = 0
 
+  // 标语
   ctx.fillStyle = 'rgba(255,255,255,0.4)'
-  ctx.font = '20px "PingFang SC", sans-serif'
-  ctx.fillText('AI 塔罗 · 心灵之境', WIDTH / 2, footerY + 96)
-
-  // 二维码占位
-  ctx.fillStyle = 'rgba(255,255,255,0.15)'
-  ctx.font = '16px "PingFang SC", sans-serif'
-  ctx.fillText('🔮 扫码体验你的专属塔罗解读', WIDTH / 2, footerY + 140)
+  ctx.font = '18px "PingFang SC", sans-serif'
+  ctx.fillText('解锁灵境，让心事都有回响', WIDTH / 2, dividerY + 96)
 
   return canvas
 }
 
 /**
- * 将 Canvas 转为 PNG Data URL
+ * Canvas → PNG Data URL
  */
 export function canvasToDataURL(canvas) {
   return canvas.toDataURL('image/png', 0.9)

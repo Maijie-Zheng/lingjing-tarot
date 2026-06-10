@@ -70,11 +70,31 @@ const INTRO_PREFIX = {
   future: (name) => `展望未来，${name}指向一种可能的趋势——`,
 }
 
+// ===== 清洗 Markdown 符号（AI 可能混入 #、---、** 等）=====
+function cleanContent(text) {
+  if (!text) return ''
+  return text
+    // 移除 markdown 标题标记（行首的 #，可能混在正文中）
+    .replace(/^#{1,6}\s+/gm, '')
+    // 移除分割线 --- 或 ***
+    .replace(/^[-*_]{3,}\s*$/gm, '')
+    // 移除粗体 **text** 标记（保留内部文字）
+    .replace(/\*\*(.+?)\*\*/g, '$1')
+    // 移除斜体 *text* 标记
+    .replace(/\*(.+?)\*/g, '$1')
+    // 移除多余空行（3+ → 2）
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+}
+
 // ===== 解析 AI 返回文本为段落数组 =====
 function parseSections(rawText) {
   if (!rawText) return []
 
-  const parts = rawText.split(SECTION_PATTERN).filter(Boolean)
+  // 先清洗全文的 markdown 符号
+  const cleaned = cleanContent(rawText)
+
+  const parts = cleaned.split(SECTION_PATTERN).filter(Boolean)
   const sections = []
   let currentTitle = null
   let currentContent = ''
@@ -82,7 +102,7 @@ function parseSections(rawText) {
   for (const part of parts) {
     if (SECTION_PATTERN.test(part)) {
       if (currentContent.trim()) {
-        sections.push({ title: currentTitle, content: currentContent.trim() })
+        sections.push({ title: currentTitle, content: cleanContent(currentContent) })
       }
       currentTitle = part.replace(/【|】/g, '')
       currentContent = ''
@@ -92,7 +112,7 @@ function parseSections(rawText) {
   }
 
   if (currentContent.trim()) {
-    sections.push({ title: currentTitle, content: currentContent.trim() })
+    sections.push({ title: currentTitle, content: cleanContent(currentContent) })
   }
 
   return sections
@@ -135,15 +155,27 @@ function escapeRegex(str) {
 // ===== 解析行动建议为独立条目 =====
 function parseActionItems(content) {
   if (!content) return []
-  // 按空行或数字+点+空格开头拆分
-  const lines = content.split(/\n\n+/)
-  if (lines.length >= 2) {
-    return lines.filter((l) => l.trim())
+
+  // 先清洗 markdown 残留
+  const cleaned = cleanContent(content)
+
+  // 1) 按双空行拆分（最自然的段落分隔）
+  const blocks = cleaned.split(/\n\n+/).filter((b) => b.trim())
+  if (blocks.length >= 2) {
+    return blocks.map((b) => b.trim())
   }
-  // 兜底：按单行拆分
-  return content
+
+  // 2) 如果只有一个 block，尝试按数字编号拆分："1. "、"2. "、"3. "
+  const numbered = cleaned.split(/\n(?=\d+[\.\、\)]\s)/)
+  if (numbered.length >= 2) {
+    return numbered.map((b) => b.trim())
+  }
+
+  // 3) 兜底：按单行拆分
+  return cleaned
     .split('\n')
     .filter((l) => l.trim())
+    .map((l) => l.trim())
 }
 
 export default function ReadingText({ rawText = '', cards = null, speed }) {
@@ -153,6 +185,13 @@ export default function ReadingText({ rawText = '', cards = null, speed }) {
   // ===== 分段动画节奏：叙事 → 过去 → 现在 → 未来 → 行动 =====
   useEffect(() => {
     if (sections.length === 0) return
+
+    // speed=0：一次性全部显示，不分段（历史记录回看用）
+    if (speed === 0) {
+      setVisibleCount(sections.length)
+      return
+    }
+
     setVisibleCount(0)
 
     let cumulative = 80
@@ -168,7 +207,7 @@ export default function ReadingText({ rawText = '', cards = null, speed }) {
     })
 
     return () => timers.forEach(clearTimeout)
-  }, [rawText, sections.length])
+  }, [rawText, sections.length, speed])
 
   if (!rawText) return null
 
@@ -326,7 +365,7 @@ export default function ReadingText({ rawText = '', cards = null, speed }) {
                 </div>
 
                 {/* 内容 */}
-                {type === 'action' && actionItems && actionItems.length >= 2 ? (
+                {type === 'action' && actionItems && actionItems.length >= 1 ? (
                   <div className="flex flex-col gap-3">
                     {actionItems.map((item, idx) => (
                       <motion.div
@@ -340,15 +379,21 @@ export default function ReadingText({ rawText = '', cards = null, speed }) {
                           ease: 'easeOut',
                         }}
                       >
-                        <span className="text-white/85 text-body leading-relaxed whitespace-pre-line">
-                          {item.trim()}
+                        <span
+                          className="flex-shrink-0 select-none"
+                          style={{ color: 'rgba(201,169,110,0.5)' }}
+                        >
+                          ·
+                        </span>
+                        <span className="text-white/85 text-body leading-loose whitespace-pre-line">
+                          {item}
                         </span>
                       </motion.div>
                     ))}
                   </div>
                 ) : (
                   <p
-                    className="text-white/85 text-body leading-relaxed whitespace-pre-line"
+                    className="text-white/85 text-body leading-loose whitespace-pre-line"
                     dangerouslySetInnerHTML={{
                       __html: highlightCardNames(displayContent, cards),
                     }}
