@@ -1,6 +1,7 @@
 /* ===== 字体 ===== */
-/* Noto Serif SC（标题衬线体）—— Google Fonts，必须在 Tailwind 指令之前 */
-@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600;700&display=swap');
+/* Noto Serif SC（标题衬线体）+ Noto Sans SC（正文无衬线）—— 通过 index.html <link> 加载 */
+/* 此处保留 @import 作为兜底，确保 Tailwind 指令之前字体可用 */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600;700&family=Noto+Sans+SC:wght@300;400&display=swap');
 
 /* ===== Tailwind 指令 ===== */
 @tailwind base;
@@ -16,30 +17,18 @@
   }
 
   html {
-    /* 移动端优先：375px 基准 */
     font-size: 16px;
   }
 
   body {
-    font-family: 'PingFang SC', 'Noto Sans SC', 'Helvetica Neue', sans-serif;
-    font-size: 16px;
-    line-height: 1.8;
-    color: #e8e0f0; /* 浅紫白——在深色背景上的正文色 */
-
-    /* 深紫渐变背景——整个 App 的底色 */
-    background: linear-gradient(180deg, #1a0a2e 0%, #0d0221 100%);
-    background-attachment: fixed;
+    @apply bg-ink-900 font-sans text-white antialiased;
+    min-height: 100dvh;
+    overflow-x: hidden;
 
     /* 防字体缩放 */
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
-
-    /* 移动端安全区域 */
-    min-height: 100dvh;
-
-    /* 防止横向溢出 */
-    overflow-x: hidden;
 
     /* 禁止 iOS 长按弹出菜单（提升 App 感） */
     -webkit-touch-callout: none;
@@ -47,7 +36,7 @@
     user-select: none;
   }
 
-  /* 允许输入框和解读文本选中（用于复制分享） */
+  /* 允许输入框和解读文本选中 */
   input, textarea, .selectable {
     -webkit-user-select: text;
     user-select: text;
@@ -63,7 +52,7 @@
   h1, h2, h3, h4 {
     font-family: 'Noto Serif SC', serif;
     font-weight: 600;
-    color: #f0e6d8; /* 浅金色白 */
+    color: #f0e6d8;
     line-height: 1.4;
   }
 
@@ -76,30 +65,56 @@
 
 /* ===== 全局组件层 ===== */
 @layer components {
-  /* 金色按钮（主要 CTA） */
+  /* 金色按钮 —— 向后兼容旧代码，新代码请用 GoldButton 组件 */
   .btn-gold {
     @apply bg-brand-gold text-mystic-deeper font-semibold rounded-card px-6 py-3
            active:scale-95 transition-transform;
     box-shadow: 0 0 20px rgba(201, 169, 110, 0.3);
   }
 
-  /* 页面容器 —— 移动端优先，适配 iPhone SE(320) ~ Pro Max(430) */
+  /* 页面容器 —— 移动端优先 */
   .page-container {
     @apply min-h-screen px-page;
     max-width: 430px;
     margin: 0 auto;
-    /* 顶部避开刘海/灵动岛 */
     padding-top: max(0px, env(safe-area-inset-top, 0px));
-    /* 底部留出安全区域 + 操作按钮空间 */
     padding-bottom: max(32px, env(safe-area-inset-bottom, 0px));
   }
 
-  /* 卡片容器 */
+  /* 磨砂卡片 —— 向后兼容，新代码请用 GlassCard 组件 */
   .mystic-card {
     @apply rounded-card p-5;
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.08);
     backdrop-filter: blur(10px);
+  }
+}
+
+/* ===== 全局工具类 ===== */
+@layer utilities {
+  /* 渐变金文字：配合 animate-shine 使用 */
+  .text-gold-gradient {
+    background: linear-gradient(
+      100deg,
+      #F6E8BC 0%,
+      #E6C982 38%,
+      #C9A24E 70%,
+      #F3E3B0 100%
+    );
+    background-size: 220% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* 深空径向渐变背景 */
+  .bg-cosmos {
+    background: radial-gradient(
+      125% 90% at 50% 34%,
+      #251A4D 0%,
+      #16102F 52%,
+      #0E0A1F 100%
+    );
   }
 }
 

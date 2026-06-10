@@ -1,7 +1,7 @@
 import { Routes, Route, useLocation } from 'react-router-dom'
-import { AnimatePresence, motion } from 'framer-motion'
-import StarBackground from './components/StarBackground'
-import HomePage from './pages/HomePage'
+import { AnimatePresence, motion, MotionConfig } from 'framer-motion'
+import StarField from './components/StarField'
+import LandingPage from './pages/LandingPage'
 import AskPage from './pages/AskPage'
 import ShufflePage from './pages/ShufflePage'
 import ReadingPage from './pages/ReadingPage'
@@ -9,13 +9,11 @@ import HistoryPage from './pages/HistoryPage'
 
 /**
  * 页面过渡动画配置
- * slideLeft：进入下一页（如 首页→输入页）
- * slideRight：返回上一页（如 解读页→洗牌页）
  */
 const pageVariants = {
   initial: { opacity: 0, y: 12 },
   animate: { opacity: 1, y: 0 },
-  exit:    { opacity: 0, y: -8 },
+  exit: { opacity: 0, y: -8 },
 }
 
 const pageTransition = {
@@ -43,22 +41,23 @@ function PageWrapper({ children }) {
 
 /**
  * App 根组件
- * 星空背景全局显示，页面内容覆盖在上层
- * AnimatePresence 实现页面间过渡动画
+ * - MotionConfig 全局尊重系统的「减少动态效果」
+ * - StarField 全局粒子星空背景
+ * - AnimatePresence 实现页面间过渡动画
  */
 export default function App() {
   const location = useLocation()
 
   return (
-    <>
-      {/* 全局星空背景 */}
-      <StarBackground />
+    <MotionConfig reducedMotion="user">
+      {/* 全局粒子星空背景 */}
+      <StarField className="fixed inset-0" />
 
       {/* 页面路由 —— 内容层在背景之上 */}
       <div className="relative page-container" style={{ zIndex: 1 }}>
         <AnimatePresence mode="wait">
           <Routes location={location} key={location.pathname}>
-            <Route path="/" element={<PageWrapper><HomePage /></PageWrapper>} />
+            <Route path="/" element={<PageWrapper><LandingPage /></PageWrapper>} />
             <Route path="/ask" element={<PageWrapper><AskPage /></PageWrapper>} />
             <Route path="/shuffle" element={<PageWrapper><ShufflePage /></PageWrapper>} />
             <Route path="/reading" element={<PageWrapper><ReadingPage /></PageWrapper>} />
@@ -66,6 +65,6 @@ export default function App() {
           </Routes>
         </AnimatePresence>
       </div>
-    </>
+    </MotionConfig>
   )
 }

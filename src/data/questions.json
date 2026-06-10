@@ -1,0 +1,45 @@
+{
+  "categories": {
+    "love":   { "label": "感情", "icon": "Heart" },
+    "career": { "label": "事业", "icon": "Briefcase" },
+    "self":   { "label": "自我", "icon": "Sparkles" },
+    "daily":  { "label": "日常", "icon": "Moon" }
+  },
+  "questions": [
+    { "id": "love-01", "cat": "love", "state": "暧昧", "text": "他对我到底是什么感觉？" },
+    { "id": "love-02", "cat": "love", "state": "暧昧", "text": "我们有可能更进一步吗？" },
+    { "id": "love-03", "cat": "love", "state": "暧昧行动", "text": "我该主动一点吗？" },
+    { "id": "love-04", "cat": "love", "state": "降温", "text": "他最近为什么变得冷淡？" },
+    { "id": "love-05", "cat": "love", "state": "消耗", "text": "这段关系该继续还是放手？" },
+    { "id": "love-06", "cat": "love", "state": "消耗", "text": "我们之间的问题到底出在哪？" },
+    { "id": "love-07", "cat": "love", "state": "分手后", "text": "我们还会复合吗？" },
+    { "id": "love-08", "cat": "love", "state": "等待", "text": "这段感情值得我继续等吗？" },
+    { "id": "love-09", "cat": "love", "state": "单身", "text": "我什么时候能遇到对的人？" },
+    { "id": "love-10", "cat": "love", "state": "模式", "text": "为什么我总是遇到相似的感情问题？" },
+
+    { "id": "career-01", "cat": "career", "state": "抉择", "text": "我该不该接受这个 offer？" },
+    { "id": "career-02", "cat": "career", "state": "抉择", "text": "我适合现在转行或跳槽吗？" },
+    { "id": "career-03", "cat": "career", "state": "趋势", "text": "接下来三个月工作上要注意什么？" },
+    { "id": "career-04", "cat": "career", "state": "趋势", "text": "我在现在的位置还有发展空间吗？" },
+    { "id": "career-05", "cat": "career", "state": "事件", "text": "这次面试／这个项目会顺利吗？" },
+    { "id": "career-06", "cat": "career", "state": "关系", "text": "我和领导的关系会改善吗？" },
+    { "id": "career-07", "cat": "career", "state": "探索", "text": "我适合搞副业或自己干吗？" },
+    { "id": "career-08", "cat": "career", "state": "倦怠", "text": "最近工作好累，问题出在哪？" },
+
+    { "id": "self-01", "cat": "self", "state": "运势", "text": "最近的整体运势怎么样？" },
+    { "id": "self-02", "cat": "self", "state": "内耗", "text": "为什么我最近总是很内耗？" },
+    { "id": "self-03", "cat": "self", "state": "方向", "text": "我现在最需要改变的是什么？" },
+    { "id": "self-04", "cat": "self", "state": "方向", "text": "接下来一个月，我的精力该放在哪？" },
+    { "id": "self-05", "cat": "self", "state": "犹豫", "text": "我心里一直犹豫的那件事，答案是什么？" },
+    { "id": "self-06", "cat": "self", "state": "盲点", "text": "有什么我该看见但一直没看见的东西？" },
+
+    { "id": "flex-01", "cat": "daily", "state": "早晨", "text": "今天适合做重要决定吗？", "when": { "hours": [5, 11] } },
+    { "id": "flex-02", "cat": "daily", "state": "早晨", "text": "今天我该注意什么？", "when": { "hours": [5, 11] } },
+    { "id": "flex-03", "cat": "daily", "state": "夜晚", "text": "今天发生的事，想让牌帮你看看吗？", "when": { "hours": [18, 24] } },
+    { "id": "flex-04", "cat": "daily", "state": "深夜", "text": "睡不着在想的那件事，要不要问问牌？", "when": { "hours": [0, 5] } },
+    { "id": "flex-05", "cat": "daily", "state": "周日", "text": "下周会是顺利的一周吗？", "when": { "weekday": [0] } },
+    { "id": "flex-06", "cat": "daily", "state": "周五", "text": "这个周末会有好事发生吗？", "when": { "weekday": [5] } },
+    { "id": "flex-07", "cat": "daily", "state": "通用", "text": "这周适合做出改变吗？" },
+    { "id": "flex-08", "cat": "daily", "state": "通用", "text": "我现在纠结的事，该选哪边？" }
+  ]
+}
