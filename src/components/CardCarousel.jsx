@@ -27,7 +27,9 @@ export default function CardCarousel({
   const [emblaRef, emblaApi] = useEmblaCarousel({
     loop: true,
     align: 'center',
-    slidesToScroll: 1,
+    dragFree: true,       // 手指滑动跟手比例移动，松手后吸附到最近卡片——比 slidesToScroll:1 丝滑得多
+    dragThreshold: 4,     // 降低拖拽触发阈值（默认 10），轻触即可滑动
+    duration: 30,         // 吸附动画稍长一点，不突兀
   });
   const [centerIndex, setCenterIndex] = useState(0);
   const [flippingDeckIdx, setFlippingDeckIdx] = useState(null); // 正在翻转的牌 deckIndex
