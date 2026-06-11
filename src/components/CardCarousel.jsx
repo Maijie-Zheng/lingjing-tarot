@@ -26,10 +26,10 @@ export default function CardCarousel({
 }) {
   const [emblaRef, emblaApi] = useEmblaCarousel({
     loop: true,
-    align: 'center',      // 松手后磁吸到最近的牌
-    dragFree: true,       // 滑动时自由跟手，不受单步限制——一次手势可掠过数张
+    align: 'center',      // 牌靠近中间自动磁吸落入——"锁定"手感
+    dragFree: false,      // 滑动过程中持续吸附，牌接近中央就自动卡入
     dragThreshold: 4,
-    duration: 35,         // 磁吸动画稍舒缓
+    duration: 35,         // 吸附动画稍舒缓
   });
   const [centerIndex, setCenterIndex] = useState(0);
   const [flippingDeckIdx, setFlippingDeckIdx] = useState(null); // 正在翻转的牌 deckIndex
@@ -49,28 +49,7 @@ export default function CardCarousel({
     };
   }, [emblaApi]);
 
-  // ===== 松手后磁吸：dragFree 模式滑动自由，手指抬起后延迟吸附到最近中心牌 =====
-  useEffect(() => {
-    if (!emblaApi) return;
-    let snapTimer = null;
-
-    const onPointerUp = () => {
-      // 仅拖拽（非点击）时触发吸附
-      if (emblaApi.clickAllowed()) return;
-      clearTimeout(snapTimer);
-      snapTimer = setTimeout(() => {
-        if (!emblaApi) return;
-        const snapIdx = emblaApi.selectedScrollSnap();
-        emblaApi.scrollTo(snapIdx);
-      }, 100); // 100ms 等惯性消退，然后磁吸到位
-    };
-
-    emblaApi.on('pointerUp', onPointerUp);
-    return () => {
-      emblaApi.off('pointerUp', onPointerUp);
-      clearTimeout(snapTimer);
-    };
-  }, [emblaApi]);
+  {/* 磁吸由 embla dragFree:false + align:center 原生处理，无需手动 snap */}
 
   // ===== remaining 变化（抽走牌）→ 重建循环 =====
   useEffect(() => {

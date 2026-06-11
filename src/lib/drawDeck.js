@@ -21,7 +21,7 @@ const shuffle = (arr) => {
 export function buildDeck() {
   return shuffle(MAJOR_ARCANA).map((card) => ({
     ...card,                         // 牌的真实身份（id / name / nameEn / image / keywords 等）
-    reversed: Math.random() < 0.5,   // 独立 50% 正/逆位
+    isReversed: Math.random() < 0.5,   // 独立 50% 正/逆位（注意：属性名必须 isReversed，TarotCard/ReadingText/shareImage 等都读这个）
   }));
 }
 
