@@ -38,9 +38,12 @@ export default function TarotCard({
   disabled = false,
   fill = false,
   guideBreathing = false,
+  reversed = false,
   onClick,
   className = '',
 }) {
+  // 逆位：牌面插画旋转 180°
+  const showReversed = reversed || card?.isReversed;
   // fill 模式不设固定宽高，由父容器控制
   const { width, height } = fill ? {} : sizeMap[size]
   const isFaceUp = !!card
@@ -109,6 +112,7 @@ export default function TarotCard({
             alt={card.name}
             className="w-full h-full object-cover"
             loading="lazy"
+            style={{ transform: showReversed ? 'rotate(180deg)' : 'none' }}
           />
           {/* 牌名渐变叠加层 */}
           <div
