@@ -28,7 +28,7 @@ export default function LandingPage() {
       {/* 历史记录入口 */}
       <button
         onClick={() => navigate('/history')}
-        className="absolute right-[18px] top-[18px] z-10 flex items-center gap-1.5 text-[13px] text-gold-200/60 hover:text-gold-200/90 transition-colors"
+        className="absolute right-[18px] top-[18px] z-20 flex items-center gap-1.5 text-[13px] text-gold-200/60 hover:text-gold-200/90 transition-colors"
       >
         <BookOpen size={16} strokeWidth={1.6} aria-hidden />
         历史记录
