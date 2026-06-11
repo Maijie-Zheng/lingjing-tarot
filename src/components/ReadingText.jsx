@@ -1,148 +1,41 @@
 import { useState, useEffect, useMemo } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
+import { Sparkles, Moon, Sun, Route } from 'lucide-react'
 import TarotCard from './TarotCard'
+import GlassCard from './GlassCard'
+import SectionTitle from './SectionTitle'
+import Divider from './Divider'
+import NarrativeThread from './NarrativeThread'
+import ActionItem from './ActionItem'
+import { parseReadingResponse } from '../utils/parseResponse'
 
 /**
- * 解读文字逐段显示动画 —— P0-10 重写
+ * 解读文字逐段显示动画 —— P3-5 v0.6
  *
  * 内容模块：
- * 1. 整体叙事 —— ✨ 灵境总览 · 整体叙事（磨砂玻璃容器）
- * 2. 单牌解读 ×3 —— 图文并茂 + 金色光晕牌面（无容器，清爽布局）
- * 3. 行动建议 —— 💫 条目式 stagger 入场（磨砂玻璃容器）
+ * 1. 整体叙事 —— GlassCard + SectionTitle(Sparkles) + Divider + NarrativeThread + 叙事正文
+ * 2. 单牌解读 ×3 —— 卡牌居中 + 金色光晕 + 标题下置 + · 引导正文（保持不动）
+ * 3. 行动建议 —— GlassCard + SectionTitle(Route) + Divider + ActionItem ×3
  *
  * Props:
- * - rawText: string — AI 返回的原始文本
- * - cards: Array | null — 三张牌数据
- * - speed: number — 保留兼容，P0-10 使用固定节奏
+ * - data: object | null — 新版结构化数据 { narrative, cards, actions }
+ * - rawText: string — 旧版纯文本（向后兼容历史记录）
+ * - cards: Array | null — 三张牌数据（用于旧版文本降级 + 牌名高亮）
+ * - speed: number — 动画速度（0 = 一次性全显示）
  */
 
-const SECTION_PATTERN = /(【[^】]+】)/g
-
-// ===== 段落类型判断 =====
-function getSectionType(title) {
-  if (!title) return 'unknown'
-  if (title.includes('整体叙事')) return 'narrative'
-  if (title.includes('行动建议')) return 'action'
-  if (title.includes('过去')) return 'past'
-  if (title.includes('现在')) return 'present'
-  if (title.includes('未来')) return 'future'
-  return 'unknown'
-}
-
-// ===== 段落视觉配置 =====
-const SECTION_CONFIG = {
-  narrative: {
-    icon: '✨',
-    titleOverride: '灵境总览 · 整体叙事',
-    borderColor: 'rgba(255,255,255,0.06)',
-  },
-  past: {
-    icon: '🌙',
-    titleOverride: null,
-    borderColor: 'rgba(201,169,110,0.1)',
-  },
-  present: {
-    icon: '✨',
-    titleOverride: null,
-    borderColor: 'rgba(201,169,110,0.1)',
-  },
-  future: {
-    icon: '🌟',
-    titleOverride: null,
-    borderColor: 'rgba(201,169,110,0.1)',
-  },
-  action: {
-    icon: '💫',
-    titleOverride: '行动建议',
-    borderColor: 'rgba(255,255,255,0.06)',
-  },
-  unknown: {
-    icon: '🔮',
-    titleOverride: null,
-    borderColor: 'rgba(255,255,255,0.06)',
-  },
-}
-
-// ===== 叙事引导语 =====
-const INTRO_PREFIX = {
-  past: (name) => `回顾过去，${name}揭示了一段重要的信息——`,
-  present: (name) => `聚焦当下，${name}映照出你此刻的内心状态——`,
-  future: (name) => `展望未来，${name}指向一种可能的趋势——`,
-}
-
-// ===== 清洗 Markdown 符号（AI 可能混入 #、---、** 等）=====
-function cleanContent(text) {
-  if (!text) return ''
-  return text
-    // 移除 markdown 标题标记（行首的 #，可能混在正文中）
-    .replace(/^#{1,6}\s+/gm, '')
-    // 移除分割线 --- 或 ***
-    .replace(/^[-*_]{3,}\s*$/gm, '')
-    // 移除粗体 **text** 标记（保留内部文字）
-    .replace(/\*\*(.+?)\*\*/g, '$1')
-    // 移除斜体 *text* 标记
-    .replace(/\*(.+?)\*/g, '$1')
-    // 移除多余空行（3+ → 2）
-    .replace(/\n{3,}/g, '\n\n')
-    .trim()
-}
-
-// ===== 解析 AI 返回文本为段落数组 =====
-function parseSections(rawText) {
-  if (!rawText) return []
-
-  // 先清洗全文的 markdown 符号
-  const cleaned = cleanContent(rawText)
-
-  const parts = cleaned.split(SECTION_PATTERN).filter(Boolean)
-  const sections = []
-  let currentTitle = null
-  let currentContent = ''
-
-  for (const part of parts) {
-    if (SECTION_PATTERN.test(part)) {
-      if (currentContent.trim()) {
-        sections.push({ title: currentTitle, content: cleanContent(currentContent) })
-      }
-      currentTitle = part.replace(/【|】/g, '')
-      currentContent = ''
-    } else {
-      currentContent += part
-    }
-  }
-
-  if (currentContent.trim()) {
-    sections.push({ title: currentTitle, content: cleanContent(currentContent) })
-  }
-
-  return sections
-}
-
-// ===== 段落标题匹配对应牌 =====
-function matchCard(title, cards) {
-  if (!cards || !title) return null
-  return (
-    cards.find((card) => {
-      const cardName = card.name
-      const posLabel = card.position?.label
-      return title.includes(cardName) || (posLabel && title.includes(posLabel))
-    }) || null
-  )
-}
-
-// ===== 正文中牌名金色高亮 =====
+// ===== 牌名金色高亮（正文中出现的牌名用金色）=====
 function highlightCardNames(text, cards) {
-  if (!cards || cards.length === 0) return text
+  if (!cards || cards.length === 0 || !text) return text
   let result = text
-  // 按牌名长度降序排列，避免短牌名误匹配长牌名
   const sortedCards = [...cards].sort((a, b) => b.name.length - a.name.length)
   sortedCards.forEach((card) => {
     const name = card.name
-    // 只在牌名作为独立词出现时高亮（前后不是中文字符）
+    if (!name) return
     const regex = new RegExp(`(?<![\\w])(${escapeRegex(name)})(?![\\w])`, 'g')
     result = result.replace(
       regex,
-      '<span class="text-brand-gold font-medium">$1</span>'
+      '<span class="text-[#EAD49A] font-medium">$1</span>'
     )
   })
   return result
@@ -152,41 +45,70 @@ function escapeRegex(str) {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
-// ===== 解析行动建议为独立条目 =====
-function parseActionItems(content) {
-  if (!content) return []
-
-  // 先清洗 markdown 残留
-  const cleaned = cleanContent(content)
-
-  // 1) 按双空行拆分（最自然的段落分隔）
-  const blocks = cleaned.split(/\n\n+/).filter((b) => b.trim())
-  if (blocks.length >= 2) {
-    return blocks.map((b) => b.trim())
-  }
-
-  // 2) 如果只有一个 block，尝试按数字编号拆分："1. "、"2. "、"3. "
-  const numbered = cleaned.split(/\n(?=\d+[\.\、\)]\s)/)
-  if (numbered.length >= 2) {
-    return numbered.map((b) => b.trim())
-  }
-
-  // 3) 兜底：按单行拆分
-  return cleaned
-    .split('\n')
-    .filter((l) => l.trim())
-    .map((l) => l.trim())
+// ===== 单牌标题图标映射 =====
+const POS_ICON = {
+  past: Moon,
+  present: Sparkles,
+  future: Sun,
 }
 
-export default function ReadingText({ rawText = '', cards = null, speed }) {
-  const sections = useMemo(() => parseSections(rawText), [rawText])
+const POS_LABEL = {
+  past: '过去',
+  present: '现在',
+  future: '未来',
+}
+
+// ===== 叙事引导语 =====
+const INTRO_PREFIX = {
+  past: (name) => `回顾过去，${name}揭示了一段重要的信息——`,
+  present: (name) => `聚焦当下，${name}映照出你此刻的内心状态——`,
+  future: (name) => `展望未来，${name}指向一种可能的趋势——`,
+}
+
+export default function ReadingText({ rawText = '', data = null, cards = null, speed }) {
+  // ===== 统一为结构化数据 =====
+  const structured = useMemo(() => {
+    if (data && data.cards?.length) return data
+    if (rawText) {
+      // 新版：rawText 本身就是结构化对象（从 localStorage 取出）
+      if (typeof rawText === 'object' && rawText.cards) return rawText
+      // 旧版：rawText 是 AI 原文文本，需解析
+      if (typeof rawText === 'string') return parseReadingResponse(rawText, cards)
+    }
+    return null
+  }, [rawText, data, cards])
+
+  const sections = useMemo(() => {
+    if (!structured) return []
+    const items = []
+
+    // 1) 整体叙事
+    if (structured.narrative) {
+      items.push({ type: 'narrative' })
+    }
+
+    // 2) 单牌解读 ×3
+    for (const card of structured.cards || []) {
+      if (card.reading) {
+        items.push({ type: 'card', card })
+      }
+    }
+
+    // 3) 行动建议
+    if (structured.actions?.length) {
+      items.push({ type: 'action' })
+    }
+
+    return items
+  }, [structured])
+
   const [visibleCount, setVisibleCount] = useState(0)
 
-  // ===== 分段动画节奏：叙事 → 过去 → 现在 → 未来 → 行动 =====
+  // ===== 分段动画节奏 =====
   useEffect(() => {
     if (sections.length === 0) return
 
-    // speed=0：一次性全部显示，不分段（历史记录回看用）
+    // speed=0：一次性全部显示
     if (speed === 0) {
       setVisibleCount(sections.length)
       return
@@ -198,50 +120,67 @@ export default function ReadingText({ rawText = '', cards = null, speed }) {
     const timers = []
 
     sections.forEach((section, i) => {
-      const type = getSectionType(section.title)
       timers.push(
         setTimeout(() => setVisibleCount(i + 1), cumulative)
       )
-      // 叙事和行动建议间隔较短，单牌解读间隔较长
-      cumulative += type === 'narrative' || type === 'action' ? 350 : 600
+      cumulative += section.type === 'narrative' || section.type === 'action' ? 350 : 600
     })
 
     return () => timers.forEach(clearTimeout)
-  }, [rawText, sections.length, speed])
+  }, [rawText, data, sections.length, speed])
 
-  if (!rawText) return null
+  if (!structured || sections.length === 0) return null
 
   return (
     <div className="flex flex-col gap-6">
       {sections.slice(0, visibleCount).map((section, i) => {
-        const type = getSectionType(section.title)
-        const card = cards ? matchCard(section.title, cards) : null
-        const config = SECTION_CONFIG[type] || SECTION_CONFIG.unknown
+        // ===== 整体叙事 =====
+        if (section.type === 'narrative') {
+          return (
+            <motion.div
+              key="narrative"
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.55, ease: 'easeOut' }}
+            >
+              <GlassCard>
+                <SectionTitle icon={Sparkles}>灵境总览 · 整体叙事</SectionTitle>
+                <Divider />
+                <NarrativeThread cards={structured.cards} />
+                <p className="mt-4 text-[14.5px] font-light leading-[2] text-white/80">
+                  {structured.narrative}
+                </p>
+              </GlassCard>
+            </motion.div>
+          )
+        }
 
-        // 标题
-        const displayTitle = config.titleOverride || section.title
-        // emoji 优先用牌面位置的，否则用配置默认的
-        const emoji = card?.position?.emoji || config.icon
+        // ===== 单牌解读（保持不动）=====
+        if (section.type === 'card') {
+          const card = section.card
+          // 合并 AI 结构化数据与原牌面数据（image / nameEn / keywords 等来自 cards 数组）
+          const merged = cards?.find((c) => c.name === card.name) || {}
+          const cardForRender = {
+            ...card,
+            nameEn: card.nameEn || merged.nameEn || '',
+            image: card.image || merged.image,
+            keywords: card.keywords || merged.keywords || '',
+            isReversed: card.reversed,
+          }
+          const IconComp = POS_ICON[card.position] || Sparkles
+          const introFn = INTRO_PREFIX[card.position]
+          const introPrefix = card.name && introFn ? introFn(card.name) : null
+          const displayReading = introPrefix
+            ? `${introPrefix}\n\n${card.reading}`
+            : card.reading
 
-        // 引导语
-        const introFn = INTRO_PREFIX[type]
-        const introPrefix = card && introFn ? introFn(card.name) : null
-        const displayContent = introPrefix
-          ? `${introPrefix}\n\n${section.content}`
-          : section.content
-
-        // 行动建议拆分
-        const actionItems = type === 'action' ? parseActionItems(section.content) : null
-
-        return (
-          <motion.div
-            key={i}
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.55, ease: 'easeOut' }}
-          >
-            {/* ===== 单牌解读：卡牌居中 + 金色光晕 + 标题下置 + · 引导正文 ===== */}
-            {card ? (
+          return (
+            <motion.div
+              key={`card-${card.position}`}
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.55, ease: 'easeOut' }}
+            >
               <div className="flex flex-col items-center">
                 {/* 卡牌居中：lg 尺寸 + 强烈三层金色光晕 + 悬浮呼吸 */}
                 <motion.div
@@ -268,7 +207,7 @@ export default function ReadingText({ rawText = '', cards = null, speed }) {
                     }}
                     style={{ borderRadius: 12 }}
                   >
-                    <TarotCard card={card} size="lg" />
+                    <TarotCard card={cardForRender} size="lg" />
                   </motion.div>
                 </motion.div>
 
@@ -280,8 +219,9 @@ export default function ReadingText({ rawText = '', cards = null, speed }) {
                     letterSpacing: '0.05em',
                   }}
                 >
-                  {displayTitle}
-                  {card.isReversed && (
+                  <IconComp size={20} strokeWidth={1.6} className="inline-block mr-1.5 -mt-0.5" aria-hidden />
+                  {POS_LABEL[card.position] || card.position} · {card.name}
+                  {card.reversed && (
                     <span
                       className="inline-block ml-2 text-xs font-normal px-2 py-0.5 rounded-full align-middle"
                       style={{
@@ -307,7 +247,7 @@ export default function ReadingText({ rawText = '', cards = null, speed }) {
                   }}
                 />
 
-                {/* 正文：· 引导，左对齐，浅金色，宽松行高 */}
+                {/* 正文：· 引导，左对齐 */}
                 <div
                   className="w-full text-body leading-loose"
                   style={{
@@ -315,7 +255,7 @@ export default function ReadingText({ rawText = '', cards = null, speed }) {
                     textShadow: '0 0 6px rgba(201,169,110,0.08)',
                   }}
                 >
-                  {displayContent
+                  {displayReading
                     .split(/\n\n+/)
                     .filter((p) => p.trim())
                     .map((paragraph, idx) => (
@@ -329,94 +269,47 @@ export default function ReadingText({ rawText = '', cards = null, speed }) {
                         <span
                           className="whitespace-pre-line"
                           dangerouslySetInnerHTML={{
-                            __html: highlightCardNames(paragraph.trim(), cards),
+                            __html: highlightCardNames(paragraph.trim(), cards || structured.cards),
                           }}
                         />
                       </p>
                     ))}
                 </div>
               </div>
-            ) : (
-              /* ===== 整体叙事 / 行动建议：磨砂玻璃容器 ===== */
-              <div
-                className="rounded-card px-4 py-4"
-                style={{
-                  background: 'rgba(255,255,255,0.03)',
-                  backdropFilter: 'blur(8px)',
-                  WebkitBackdropFilter: 'blur(8px)',
-                  border: `1px solid ${config.borderColor}`,
-                  boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.02)',
-                }}
-              >
-                {/* 标题行 */}
-                <div className="flex flex-col gap-2 mb-3">
-                  <h3 className="text-brand-gold text-base font-serif font-semibold flex items-center gap-1.5 flex-wrap">
-                    <span className="inline-block">{emoji}</span>
-                    <span>{displayTitle}</span>
-                  </h3>
-                  {/* 金色渐变分隔线 */}
-                  <div
-                    className="h-px"
-                    style={{
-                      background:
-                        'linear-gradient(90deg, transparent, rgba(201,169,110,0.25), transparent)',
-                    }}
-                  />
+            </motion.div>
+          )
+        }
+
+        // ===== 行动建议 =====
+        if (section.type === 'action') {
+          return (
+            <motion.div
+              key="action"
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.55, ease: 'easeOut' }}
+            >
+              <GlassCard>
+                <SectionTitle icon={Route}>行动建议</SectionTitle>
+                <Divider />
+                <div className="flex flex-col">
+                  {structured.actions.map((action, idx) => (
+                    <ActionItem
+                      key={idx}
+                      index={idx + 1}
+                      title={action.title}
+                      sourceCard={action.sourceCard}
+                      body={action.body}
+                      isLast={idx === structured.actions.length - 1}
+                    />
+                  ))}
                 </div>
+              </GlassCard>
+            </motion.div>
+          )
+        }
 
-                {/* 内容 */}
-                {type === 'action' && actionItems && actionItems.length >= 1 ? (
-                  <div className="flex flex-col gap-3">
-                    {actionItems.map((item, idx) => (
-                      <motion.div
-                        key={idx}
-                        className="flex gap-2"
-                        initial={{ opacity: 0, x: -8 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{
-                          delay: idx * 0.12,
-                          duration: 0.35,
-                          ease: 'easeOut',
-                        }}
-                      >
-                        <span
-                          className="flex-shrink-0 select-none"
-                          style={{ color: 'rgba(201,169,110,0.5)' }}
-                        >
-                          ·
-                        </span>
-                        <span className="text-white/85 text-body leading-loose whitespace-pre-line">
-                          {item}
-                        </span>
-                      </motion.div>
-                    ))}
-                  </div>
-                ) : (
-                  <p
-                    className="text-white/85 text-body leading-loose whitespace-pre-line"
-                    dangerouslySetInnerHTML={{
-                      __html: highlightCardNames(displayContent, cards),
-                    }}
-                  />
-                )}
-              </div>
-            )}
-
-            {/* ===== 模块间分隔 ✦ ===== */}
-            {i < visibleCount - 1 && (
-              <div className="flex items-center justify-center mt-5">
-                <motion.span
-                  className="text-sm"
-                  style={{ color: 'rgba(201,169,110,0.3)' }}
-                  animate={{ opacity: [0.3, 0.6, 0.3] }}
-                  transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-                >
-                  ✦
-                </motion.span>
-              </div>
-            )}
-          </motion.div>
-        )
+        return null
       })}
 
       {/* ===== 加载指示器 ===== */}

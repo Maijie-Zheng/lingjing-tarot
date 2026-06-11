@@ -1,6 +1,7 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
+import { Upload, Check, BookOpen, Home, Moon } from 'lucide-react'
 import LoadingSpinner from '../components/LoadingSpinner'
 import ReadingText from '../components/ReadingText'
 import ShareOverlay from '../components/ShareOverlay'
@@ -8,6 +9,7 @@ import { getSystemPrompt, buildUserPrompt } from '../utils/promptBuilder'
 import { callDeepSeek } from '../utils/api'
 import { saveReading } from '../utils/storage'
 import { generateShareCanvas, canvasToDataURL, downloadImage } from '../utils/shareImage'
+import { parseReadingResponse } from '../utils/parseResponse'
 
 /** 检测是否微信浏览器 */
 function isWeChat() {
@@ -15,13 +17,12 @@ function isWeChat() {
 }
 
 /**
- * 解读结果页 —— P0-9 + P0-10 升级
+ * 解读结果页 —— P3-5 v0.6
  *
- * - 问题卡片磨砂玻璃化（对齐 AskPage/ShufflePage 风格）
- * - Loading 星轨仪式感动画（星轨双环 + 牌面浮现 + 诗意文案）
- * - "重新抽牌"保留问题（修复 bug）
- * - 背景光晕 + 漂浮光斑氛围增强
- * - ReadingText P0-10 模块化重写（单牌区无玻璃容器 + 叙事/行动磨砂玻璃）
+ * - AI 返回 JSON 结构化数据（整体叙事 + 三牌关键词 + 行动建议含来源牌）
+ * - ReadingText 模块化渲染（NarrativeThread + ActionItem 新设计）
+ * - 全页无 emoji，统一金色细线图标（lucide）
+ * - 背景光晕 + 漂浮光斑 + 金色星轨环
  */
 export default function ReadingPage() {
   const location = useLocation()
@@ -35,7 +36,8 @@ export default function ReadingPage() {
 
   // 状态机
   const [status, setStatus] = useState('loading') // loading | error | ready
-  const [readingText, setReadingText] = useState('')
+  const [readingData, setReadingData] = useState(null) // 结构化解读数据
+  const [readingRawText, setReadingRawText] = useState('') // 保留原始文本用于分享卡片
   const [errorMessage, setErrorMessage] = useState('')
   const [saved, setSaved] = useState(false)
   const [shareImage, setShareImage] = useState(null)
@@ -58,15 +60,19 @@ export default function ReadingPage() {
         const userPrompt = buildUserPrompt(question, cards)
         const text = await callDeepSeek(systemPrompt, userPrompt)
         readingRef.current = text
-        setReadingText(text)
+        setReadingRawText(text)
+
+        // 解析 AI 响应为结构化数据
+        const parsed = parseReadingResponse(text, cards)
+        setReadingData(parsed)
         setStatus('ready')
 
-        // 自动保存
+        // 自动保存（结构化数据 + 原始文本）
         try {
           saveReading({
             question,
             cards,
-            reading: text,
+            reading: parsed, // 存储结构化数据
             suggestions: [],
           })
           setSaved(true)
@@ -91,7 +97,11 @@ export default function ReadingPage() {
   // ===== 分享 =====
   const handleShare = async () => {
     try {
-      const canvas = await generateShareCanvas({ question, cards, reading: readingRef.current })
+      const canvas = await generateShareCanvas({
+        question,
+        cards,
+        reading: readingRef.current,
+      })
       const dataURL = canvasToDataURL(canvas)
 
       if (isWeChat()) {
@@ -105,7 +115,7 @@ export default function ReadingPage() {
         if (navigator.canShare({ files: [file] })) {
           await navigator.share({
             title: '灵境 · AI 塔罗解读',
-            text: '来看看我的塔罗解读结果 🔮',
+            text: '来看看我的塔罗解读结果',
             files: [file],
           })
           return
@@ -116,7 +126,11 @@ export default function ReadingPage() {
     } catch (err) {
       if (err.name === 'AbortError') return
       try {
-        const canvas = await generateShareCanvas({ question, cards, reading: readingRef.current })
+        const canvas = await generateShareCanvas({
+          question,
+          cards,
+          reading: readingRef.current,
+        })
         downloadImage(canvasToDataURL(canvas))
       } catch {
         // 静默失败
@@ -130,7 +144,7 @@ export default function ReadingPage() {
       saveReading({
         question,
         cards,
-        reading: readingRef.current,
+        reading: readingData || parseReadingResponse(readingRef.current, cards),
         suggestions: [],
       })
       setSaved(true)
@@ -162,7 +176,7 @@ export default function ReadingPage() {
         transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
       />
 
-      {/* ===== 漂浮光斑（P0-10 新增）===== */}
+      {/* ===== 漂浮光斑 ===== */}
       <motion.div
         className="fixed pointer-events-none rounded-full"
         style={{
@@ -200,7 +214,7 @@ export default function ReadingPage() {
         transition={{ duration: 22, repeat: Infinity, ease: 'easeInOut' }}
       />
 
-      {/* ===== 金色星轨粒子环（P0-10 卡牌居中设计配套）===== */}
+      {/* ===== 金色星轨粒子环 ===== */}
       {status === 'ready' && (
         <motion.div
           className="fixed pointer-events-none left-1/2 rounded-full"
@@ -216,7 +230,6 @@ export default function ReadingPage() {
           animate={{ rotate: 360 }}
           transition={{ duration: 30, repeat: Infinity, ease: 'linear' }}
         >
-          {/* 环上 6 颗金色光点 */}
           {[0, 60, 120, 180, 240, 300].map((angle) => (
             <div
               key={angle}
@@ -250,7 +263,7 @@ export default function ReadingPage() {
         </button>
       </div>
 
-      {/* ===== 问题展示卡（磨砂玻璃风格，对齐 AskPage/ShufflePage）===== */}
+      {/* ===== 问题展示卡（磨砂玻璃风格）===== */}
       {question && (
         <motion.div
           className="rounded-card px-4 py-3 text-center relative z-10"
@@ -283,7 +296,7 @@ export default function ReadingPage() {
             animate={{ opacity: 1 }}
             transition={{ duration: 0.4 }}
           >
-            <span className="text-5xl">🌙</span>
+            <Moon size={48} strokeWidth={1.2} className="text-white/30" aria-hidden />
             <p className="text-white/60 text-center">{errorMessage}</p>
             <div className="flex gap-4">
               <button onClick={handleReshuffle} className="btn-gold">
@@ -298,7 +311,7 @@ export default function ReadingPage() {
 
         {/* Ready 状态：解读内容 */}
         <AnimatePresence mode="wait">
-          {status === 'ready' && readingText && (
+          {status === 'ready' && readingData && (
             <motion.div
               key="reading-content"
               initial={{ opacity: 0 }}
@@ -306,7 +319,7 @@ export default function ReadingPage() {
               transition={{ duration: 0.5 }}
             >
               <ReadingText
-                rawText={readingText}
+                data={readingData}
                 cards={hasValidData ? cards : null}
                 speed={800}
               />
@@ -315,7 +328,7 @@ export default function ReadingPage() {
         </AnimatePresence>
       </div>
 
-      {/* ===== 底部操作按钮 ===== */}
+      {/* ===== 底部操作按钮（P3-5 v0.6：去 emoji，改 lucide 图标）===== */}
       <AnimatePresence>
         {status === 'ready' && (
           <motion.div
@@ -324,23 +337,45 @@ export default function ReadingPage() {
             animate={{ opacity: 1 }}
             transition={{ delay: 0.5 }}
           >
-            <button className="btn-gold" onClick={handleShare}>
-              📤 分享卡片
+            <button className="btn-gold flex items-center justify-center gap-2" onClick={handleShare}>
+              <Upload size={17} strokeWidth={1.8} aria-hidden />
+              分享卡片
             </button>
             <div className="flex gap-4 justify-center">
               <button
                 onClick={handleSave}
-                className={`text-sm transition-colors ${
-                  saved ? 'text-green-400' : 'text-brand-gold/60'
+                className={`text-sm transition-colors flex items-center gap-1 ${
+                  saved ? 'text-green-400' : ''
                 }`}
+                style={saved ? {} : { color: 'rgba(201,169,110,0.6)' }}
               >
-                {saved ? '✅ 已保存' : '💾 保存'}
+                {saved ? (
+                  <>
+                    <Check size={15} strokeWidth={1.8} aria-hidden />
+                    已保存
+                  </>
+                ) : (
+                  <>
+                    <Check size={15} strokeWidth={1.8} aria-hidden />
+                    保存
+                  </>
+                )}
               </button>
-              <Link to="/history" className="text-sm text-brand-gold/60">
-                📜 历史记录
+              <Link
+                to="/history"
+                className="text-sm flex items-center gap-1"
+                style={{ color: 'rgba(201,169,110,0.6)' }}
+              >
+                <BookOpen size={15} strokeWidth={1.8} aria-hidden />
+                历史记录
               </Link>
-              <Link to="/" className="text-sm text-brand-gold/60">
-                🏠 首页
+              <Link
+                to="/"
+                className="text-sm flex items-center gap-1"
+                style={{ color: 'rgba(201,169,110,0.6)' }}
+              >
+                <Home size={15} strokeWidth={1.8} aria-hidden />
+                首页
               </Link>
             </div>
           </motion.div>
