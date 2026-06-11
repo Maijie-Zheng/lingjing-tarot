@@ -344,10 +344,8 @@ export default function ReadingPage() {
             <div className="flex gap-4 justify-center">
               <button
                 onClick={handleSave}
-                className={`text-sm transition-colors flex items-center gap-1 ${
-                  saved ? 'text-green-400' : ''
-                }`}
-                style={saved ? {} : { color: 'rgba(201,169,110,0.6)' }}
+                className="text-sm transition-colors flex items-center gap-1"
+                style={{ color: saved ? '#c9a96e' : 'rgba(201,169,110,0.6)' }}
               >
                 {saved ? (
                   <>
