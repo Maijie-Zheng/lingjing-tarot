@@ -27,9 +27,11 @@ function isWeChat() {
 export default function ReadingPage() {
   const location = useLocation()
   const navigate = useNavigate()
-  const { question, cards } = location.state || {
+  const { question, cards, preReading, preError } = location.state || {
     question: '',
     cards: [],
+    preReading: null,
+    preError: null,
   }
 
   const hasValidData = question && cards && cards.length === 3
@@ -48,6 +50,31 @@ export default function ReadingPage() {
     if (hasStartedRef.current) return
     hasStartedRef.current = true
 
+    // ===== 预取结果（来自 ReadingLoadingPage）：直接使用，跳过 AI 调用 =====
+    if (preReading) {
+      readingRef.current = preReading
+      setReadingRawText(preReading)
+      const parsed = parseReadingResponse(preReading, cards)
+      setReadingData(parsed)
+      setStatus('ready')
+
+      try {
+        saveReading({ question, cards, reading: parsed, suggestions: [] })
+        setSaved(true)
+      } catch {
+        // 保存失败不影响使用
+      }
+      return
+    }
+
+    // ===== 预取错误（来自 ReadingLoadingPage）：直接显示错误 =====
+    if (preError) {
+      setStatus('error')
+      setErrorMessage(preError)
+      return
+    }
+
+    // ===== 降级路径：没有预取数据（直接访问 /reading 或历史记录回访）=====
     if (!hasValidData) {
       setStatus('error')
       setErrorMessage('缺少抽牌数据，请从洗牌页重新进入')

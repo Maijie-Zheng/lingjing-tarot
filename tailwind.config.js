@@ -140,6 +140,37 @@ export default {
         textfade: {
           '0%,100%': { opacity: '.55' }, '50%': { opacity: '.9' },
         },
+        // P3-6 读取过渡页动画
+        cardglow: {
+          '0%,100%': {
+            boxShadow: '0 0 26px rgba(230,201,130,.28),0 8px 22px rgba(0,0,0,.5)',
+          },
+          '50%': {
+            boxShadow: '0 0 46px rgba(230,201,130,.5),0 8px 22px rgba(0,0,0,.5)',
+          },
+        },
+        halo: {
+          '0%,100%': { opacity: '.4', transform: 'translate(-50%,-50%) scale(1)' },
+          '50%':     { opacity: '.7', transform: 'translate(-50%,-50%) scale(1.12)' },
+        },
+        txtbreathe: {
+          '0%,100%': { opacity: '.6' }, '50%': { opacity: '.92' },
+        },
+        floaty: {
+          '0%,100%': { transform: 'translateY(0)' }, '50%': { transform: 'translateY(-6px)' },
+        },
+        slotcycle: {
+          '0%,11%': {
+            opacity: '1',
+            color: '#F3E3B0',
+            filter: 'drop-shadow(0 0 8px rgba(230,201,130,.7))',
+          },
+          '33%,100%': {
+            opacity: '.3',
+            color: '#9A8A5E',
+            filter: 'drop-shadow(0 0 0 transparent)',
+          },
+        },
       },
       animation: {
         shine: 'shine 7s linear infinite',
@@ -162,6 +193,12 @@ export default {
         'settle':  'settle 2.5s ease-in-out infinite',
         'shimmer': 'shimmer 2s ease-in-out infinite',
         'textfade': 'textfade 2s ease-in-out infinite',
+        // P3-6 读取过渡页动画
+        'cardglow':   'cardglow 4s ease-in-out infinite',
+        'halo':       'halo 4s ease-in-out infinite',
+        'txtbreathe': 'txtbreathe 3s ease-in-out infinite',
+        'floaty':     'floaty 5s ease-in-out infinite',
+        'slotcycle':  'slotcycle 3.6s ease-in-out infinite',
       },
     },
   },

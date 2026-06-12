@@ -77,10 +77,10 @@ export default function DrawPage() {
     const timer = setTimeout(() => {
       setIsTransitioning(true);
       setTimeout(() => {
-        navigate('/reading', {
+        navigate('/reading-loading', {
           state: {
             question,
-            cards: picks.map((card, i) => ({
+            picks: picks.map((card, i) => ({
               ...card,
               position: POSITIONS[i],
             })),

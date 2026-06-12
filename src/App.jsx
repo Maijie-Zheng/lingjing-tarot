@@ -7,6 +7,7 @@ import ShufflePage from './pages/ShufflePage'
 import ReadingPage from './pages/ReadingPage'
 import MeditatePage from './pages/MeditatePage'
 import DrawPage from './pages/DrawPage'
+import ReadingLoadingPage from './pages/ReadingLoadingPage'
 import HistoryPage from './pages/HistoryPage'
 
 /**
@@ -64,6 +65,7 @@ export default function App() {
             <Route path="/meditate" element={<PageWrapper><MeditatePage /></PageWrapper>} />
             <Route path="/shuffle" element={<PageWrapper><ShufflePage /></PageWrapper>} />
             <Route path="/draw" element={<PageWrapper><DrawPage /></PageWrapper>} />
+            <Route path="/reading-loading" element={<PageWrapper><ReadingLoadingPage /></PageWrapper>} />
             <Route path="/reading" element={<PageWrapper><ReadingPage /></PageWrapper>} />
             <Route path="/history" element={<PageWrapper><HistoryPage /></PageWrapper>} />
           </Routes>
