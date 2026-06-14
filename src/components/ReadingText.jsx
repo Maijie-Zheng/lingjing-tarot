@@ -170,9 +170,6 @@ export default function ReadingText({ rawText = '', data = null, cards = null, s
           const IconComp = POS_ICON[card.position] || Sparkles
           const introFn = INTRO_PREFIX[card.position]
           const introPrefix = card.name && introFn ? introFn(card.name) : null
-          const displayReading = introPrefix
-            ? `${introPrefix}\n\n${card.reading}`
-            : card.reading
 
           return (
             <motion.div
@@ -182,7 +179,7 @@ export default function ReadingText({ rawText = '', data = null, cards = null, s
               transition={{ duration: 0.55, ease: 'easeOut' }}
             >
               <div className="flex flex-col items-center">
-                {/* 卡牌居中：lg 尺寸 + 强烈三层金色光晕 + 悬浮呼吸 */}
+                {/* 卡牌居中：三层金色光晕 + 悬浮呼吸 */}
                 <motion.div
                   className="mb-5"
                   animate={{ y: [0, -6, 0] }}
@@ -207,7 +204,7 @@ export default function ReadingText({ rawText = '', data = null, cards = null, s
                     }}
                     style={{ borderRadius: 12 }}
                   >
-                    <TarotCard card={cardForRender} size="lg" />
+                    <TarotCard card={cardForRender} size="md" />
                   </motion.div>
                 </motion.div>
 
@@ -247,32 +244,29 @@ export default function ReadingText({ rawText = '', data = null, cards = null, s
                   }}
                 />
 
-                {/* 正文：· 引导，左对齐 */}
-                <div
-                  className="w-full text-body leading-loose"
-                  style={{
-                    color: 'rgba(240,230,216,0.8)',
-                    textShadow: '0 0 6px rgba(201,169,110,0.08)',
-                  }}
-                >
-                  {displayReading
+                {/* 正文：导语句（略暗金）+ 正文段落（与整体叙事统一） */}
+                <div className="w-full">
+                  {/* 导语句 */}
+                  {introPrefix && (
+                    <p
+                      className="mt-[18px] text-[13px] leading-[1.9] text-gold-200/70"
+                      dangerouslySetInnerHTML={{
+                        __html: highlightCardNames(introPrefix, cards || structured.cards),
+                      }}
+                    />
+                  )}
+                  {/* 正文段落 */}
+                  {card.reading
                     .split(/\n\n+/)
                     .filter((p) => p.trim())
                     .map((paragraph, idx) => (
-                      <p key={idx} className="mb-3 flex gap-2">
-                        <span
-                          className="flex-shrink-0 select-none"
-                          style={{ color: 'rgba(201,169,110,0.5)' }}
-                        >
-                          ·
-                        </span>
-                        <span
-                          className="whitespace-pre-line"
-                          dangerouslySetInnerHTML={{
-                            __html: highlightCardNames(paragraph.trim(), cards || structured.cards),
-                          }}
-                        />
-                      </p>
+                      <p
+                        key={idx}
+                        className="mt-3 text-[14.5px] font-light leading-[2.0] text-white/80"
+                        dangerouslySetInnerHTML={{
+                          __html: highlightCardNames(paragraph.trim(), cards || structured.cards),
+                        }}
+                      />
                     ))}
                 </div>
               </div>

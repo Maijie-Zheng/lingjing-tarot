@@ -99,6 +99,8 @@ function parseLegacyText(rawText, cards) {
       getCardInfo(futureSection, 'future'),
     ],
     actions: actionItems,
+    shareQuote: null, // 旧版无此字段，触发降级
+    shareNarrative: null,
   }
 }
 
@@ -131,6 +133,8 @@ function normalizeJsonResponse(json, externalCards) {
     narrative: json.narrative || '',
     cards: orderedCards,
     actions,
+    shareQuote: json.shareQuote || null,
+    shareNarrative: json.shareNarrative || null,
   }
 }
 

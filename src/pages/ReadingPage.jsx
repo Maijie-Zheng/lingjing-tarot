@@ -5,10 +5,11 @@ import { Upload, Check, BookOpen, Home, Moon } from 'lucide-react'
 import LoadingSpinner from '../components/LoadingSpinner'
 import ReadingText from '../components/ReadingText'
 import ShareOverlay from '../components/ShareOverlay'
+import SharePoster from '../components/SharePoster'
 import { getSystemPrompt, buildUserPrompt } from '../utils/promptBuilder'
 import { callDeepSeek } from '../utils/api'
 import { saveReading } from '../utils/storage'
-import { generateShareCanvas, canvasToDataURL, downloadImage } from '../utils/shareImage'
+import { generateShareImage, downloadImage } from '../utils/shareImage'
 import { parseReadingResponse } from '../utils/parseResponse'
 
 /** 检测是否微信浏览器 */
@@ -36,6 +37,37 @@ export default function ReadingPage() {
 
   const hasValidData = question && cards && cards.length === 3
 
+  // ===== 合并海报所需牌数据（picks 的 image + AI 的 keyword）=====
+  const posterCards = useMemo(() => {
+    if (!cards || !readingData?.cards) return cards || []
+    return (readingData.cards || []).map((aiCard, i) => {
+      const pick = cards[i] || {}
+      return {
+        ...aiCard,
+        image: pick.image || aiCard.image,
+        nameEn: pick.nameEn || aiCard.nameEn || '',
+        isReversed: aiCard.reversed ?? pick.isReversed ?? false,
+        position: aiCard.position || pick.position?.key || (i === 0 ? 'past' : i === 1 ? 'present' : 'future'),
+      }
+    })
+  }, [cards, readingData])
+
+  // ===== 分享金句 + 浓缩叙事（含降级）=====
+  const shareQuote = useMemo(() => {
+    if (readingData?.shareQuote) return readingData.shareQuote
+    // 降级：从 narrative 取第一句，截断到 20 字
+    const narrative = readingData?.narrative || ''
+    const firstSentence = narrative.split(/[。！？；\n]/)[0]?.trim() || ''
+    if (firstSentence && firstSentence.length > 0) {
+      return firstSentence.length > 20 ? firstSentence.slice(0, 20) : firstSentence
+    }
+    return null
+  }, [readingData])
+
+  const shareNarrative = useMemo(() => {
+    return readingData?.shareNarrative || null
+  }, [readingData])
+
   // 状态机
   const [status, setStatus] = useState('loading') // loading | error | ready
   const [readingData, setReadingData] = useState(null) // 结构化解读数据
@@ -43,8 +75,10 @@ export default function ReadingPage() {
   const [errorMessage, setErrorMessage] = useState('')
   const [saved, setSaved] = useState(false)
   const [shareImage, setShareImage] = useState(null)
+  const [isGeneratingShare, setIsGeneratingShare] = useState(false)
   const hasStartedRef = useRef(false)
   const readingRef = useRef('')
+  const posterRef = useRef(null)
 
   useEffect(() => {
     if (hasStartedRef.current) return
@@ -121,49 +155,77 @@ export default function ReadingPage() {
     navigate(`/shuffle?q=${encodeURIComponent(question)}`)
   }, [question, navigate])
 
-  // ===== 分享 =====
-  const handleShare = async () => {
-    try {
-      const canvas = await generateShareCanvas({
-        question,
-        cards,
-        reading: readingRef.current,
-      })
-      const dataURL = canvasToDataURL(canvas)
+  // ===== 分享（P3-7 v0.9：html-to-image 导出 SharePoster DOM）=====
+  const handleShare = useCallback(async () => {
+    // 1) 触发海报渲染（隐藏 DOM）
+    setIsGeneratingShare(true)
+  }, [])
 
-      if (isWeChat()) {
-        setShareImage(dataURL)
-        return
-      }
+  // ===== 海报 DOM 就绪后 → html-to-image 导出 =====
+  useEffect(() => {
+    if (!isGeneratingShare || !posterRef.current) return
 
-      if (navigator.share && navigator.canShare) {
-        const blob = await (await fetch(dataURL)).blob()
-        const file = new File([blob], '灵境-塔罗解读.png', { type: 'image/png' })
-        if (navigator.canShare({ files: [file] })) {
-          await navigator.share({
-            title: '灵境 · AI 塔罗解读',
-            text: '来看看我的塔罗解读结果',
-            files: [file],
-          })
+    let cancelled = false
+
+    const capture = async () => {
+      // 等一帧确保所有图片 + 二维码 SVG 渲染完成
+      await new Promise((r) => requestAnimationFrame(r))
+      // 再等 200ms 确保图片加载（html-to-image 自带等待，但多等一帧更安全）
+      await new Promise((r) => setTimeout(r, 200))
+
+      if (cancelled) return
+
+      try {
+        const dataURL = await generateShareImage(posterRef.current)
+
+        if (cancelled) return
+
+        // 2) 微信浏览器 → 弹窗浮层
+        if (isWeChat()) {
+          setShareImage(dataURL)
+          setIsGeneratingShare(false)
           return
         }
-      }
 
-      downloadImage(dataURL)
-    } catch (err) {
-      if (err.name === 'AbortError') return
-      try {
-        const canvas = await generateShareCanvas({
-          question,
-          cards,
-          reading: readingRef.current,
-        })
-        downloadImage(canvasToDataURL(canvas))
-      } catch {
-        // 静默失败
+        // 3) 支持 Web Share API → 优先分享文件
+        if (navigator.share && navigator.canShare) {
+          try {
+            const blob = await (await fetch(dataURL)).blob()
+            const file = new File([blob], '灵境-塔罗解读.png', { type: 'image/png' })
+            if (navigator.canShare({ files: [file] })) {
+              await navigator.share({
+                title: '灵境 · AI 塔罗解读',
+                text: '来看看我的塔罗解读结果',
+                files: [file],
+              })
+              setIsGeneratingShare(false)
+              return
+            }
+          } catch (err) {
+            if (err.name === 'AbortError') {
+              setIsGeneratingShare(false)
+              return
+            }
+            // Web Share 失败 → 降级下载
+          }
+        }
+
+        // 4) 降级：直接下载
+        downloadImage(dataURL)
+        setIsGeneratingShare(false)
+      } catch (err) {
+        console.error('海报生成失败:', err)
+        // html-to-image 失败 → 静默降级（不做 Canvas 兜底，保持简洁）
+        setIsGeneratingShare(false)
       }
     }
-  }
+
+    capture()
+
+    return () => {
+      cancelled = true
+    }
+  }, [isGeneratingShare])
 
   // ===== 手动保存 =====
   const handleSave = () => {
@@ -413,6 +475,28 @@ export default function ReadingPage() {
         imageDataURL={shareImage}
         onClose={() => setShareImage(null)}
       />
+
+      {/* 隐藏海报 DOM（供 html-to-image 截图，不显示在页面上） */}
+      <div
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          opacity: 0,
+          pointerEvents: 'none',
+          zIndex: -1,
+        }}
+      >
+        {isGeneratingShare && (
+          <SharePoster
+            ref={posterRef}
+            question={question}
+            cards={posterCards}
+            shareQuote={shareQuote}
+            shareNarrative={shareNarrative}
+          />
+        )}
+      </div>
     </div>
   )
 }
