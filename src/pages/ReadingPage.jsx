@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { createRoot } from 'react-dom/client'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Upload, Check, BookOpen, Home, Moon } from 'lucide-react'
 import LoadingSpinner from '../components/LoadingSpinner'
@@ -44,10 +45,8 @@ export default function ReadingPage() {
   const [errorMessage, setErrorMessage] = useState('')
   const [saved, setSaved] = useState(false)
   const [shareImage, setShareImage] = useState(null)
-  const [isGeneratingShare, setIsGeneratingShare] = useState(false)
   const hasStartedRef = useRef(false)
   const readingRef = useRef('')
-  const posterRef = useRef(null)
 
   // ===== 合并海报所需牌数据（picks 的 image + AI 的 keyword）=====
   const posterCards = useMemo(() => {
@@ -155,77 +154,71 @@ export default function ReadingPage() {
     navigate(`/shuffle?q=${encodeURIComponent(question)}`)
   }, [question, navigate])
 
-  // ===== 分享（P3-7 v0.9：html-to-image 导出 SharePoster DOM）=====
+  // ===== 分享（P3-7 v0.9：createRoot + html-to-image 导出）=====
   const handleShare = useCallback(async () => {
-    // 1) 触发海报渲染（隐藏 DOM）
-    setIsGeneratingShare(true)
-  }, [])
+    // 1) 创建离屏容器（远离视口但保持正常渲染）
+    const container = document.createElement('div')
+    container.style.cssText =
+      'position:fixed;left:-9999px;top:0;width:375px;opacity:1;'
+    document.body.appendChild(container)
 
-  // ===== 海报 DOM 就绪后 → html-to-image 导出 =====
-  useEffect(() => {
-    if (!isGeneratingShare || !posterRef.current) return
+    // 2) 渲染 SharePoster 到离屏容器
+    const root = createRoot(container)
+    root.render(
+      <SharePoster
+        question={question}
+        cards={posterCards}
+        shareQuote={shareQuote}
+        shareNarrative={shareNarrative}
+      />
+    )
 
-    let cancelled = false
+    // 3) 等 DOM 提交 + 资源（图片/字体/二维码 SVG）加载
+    await new Promise((r) => requestAnimationFrame(r))
+    await new Promise((r) => setTimeout(r, 500))
 
-    const capture = async () => {
-      // 等一帧确保所有图片 + 二维码 SVG 渲染完成
-      await new Promise((r) => requestAnimationFrame(r))
-      // 再等 200ms 确保图片加载（html-to-image 自带等待，但多等一帧更安全）
-      await new Promise((r) => setTimeout(r, 200))
+    // 4) 截图
+    try {
+      const posterEl = container.firstChild
+      if (!posterEl) throw new Error('海报 DOM 未就绪')
 
-      if (cancelled) return
+      const dataURL = await generateShareImage(posterEl)
 
-      try {
-        const dataURL = await generateShareImage(posterRef.current)
-
-        if (cancelled) return
-
-        // 2) 微信浏览器 → 弹窗浮层
-        if (isWeChat()) {
-          setShareImage(dataURL)
-          setIsGeneratingShare(false)
-          return
-        }
-
-        // 3) 支持 Web Share API → 优先分享文件
-        if (navigator.share && navigator.canShare) {
-          try {
-            const blob = await (await fetch(dataURL)).blob()
-            const file = new File([blob], '灵境-塔罗解读.png', { type: 'image/png' })
-            if (navigator.canShare({ files: [file] })) {
-              await navigator.share({
-                title: '灵境 · AI 塔罗解读',
-                text: '来看看我的塔罗解读结果',
-                files: [file],
-              })
-              setIsGeneratingShare(false)
-              return
-            }
-          } catch (err) {
-            if (err.name === 'AbortError') {
-              setIsGeneratingShare(false)
-              return
-            }
-            // Web Share 失败 → 降级下载
-          }
-        }
-
-        // 4) 降级：直接下载
-        downloadImage(dataURL)
-        setIsGeneratingShare(false)
-      } catch (err) {
-        console.error('海报生成失败:', err)
-        // html-to-image 失败 → 静默降级（不做 Canvas 兜底，保持简洁）
-        setIsGeneratingShare(false)
+      // 5) 分流：微信弹窗 / Web Share API / 下载
+      if (isWeChat()) {
+        setShareImage(dataURL)
+        return
       }
-    }
 
-    capture()
+      if (navigator.share && navigator.canShare) {
+        try {
+          const blob = await (await fetch(dataURL)).blob()
+          const file = new File([blob], '灵境-塔罗解读.png', {
+            type: 'image/png',
+          })
+          if (navigator.canShare({ files: [file] })) {
+            await navigator.share({
+              title: '灵境 · AI 塔罗解读',
+              text: '来看看我的塔罗解读结果',
+              files: [file],
+            })
+            return
+          }
+        } catch (err) {
+          if (err.name === 'AbortError') return // 用户取消分享
+        }
+      }
 
-    return () => {
-      cancelled = true
+      // 降级：直接下载
+      downloadImage(dataURL)
+    } catch (err) {
+      console.error('海报生成失败:', err)
+    } finally {
+      // 6) 清理
+      root.unmount()
+      document.body.removeChild(container)
     }
-  }, [isGeneratingShare])
+  }, [question, posterCards, shareQuote, shareNarrative])
 
   // ===== 手动保存 =====
   const handleSave = () => {
@@ -475,28 +468,6 @@ export default function ReadingPage() {
         imageDataURL={shareImage}
         onClose={() => setShareImage(null)}
       />
-
-      {/* 隐藏海报 DOM（供 html-to-image 截图，不显示在页面上） */}
-      <div
-        style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          opacity: 0,
-          pointerEvents: 'none',
-          zIndex: -1,
-        }}
-      >
-        {isGeneratingShare && (
-          <SharePoster
-            ref={posterRef}
-            question={question}
-            cards={posterCards}
-            shareQuote={shareQuote}
-            shareNarrative={shareNarrative}
-          />
-        )}
-      </div>
     </div>
   )
 }
