@@ -37,6 +37,18 @@ export default function ReadingPage() {
 
   const hasValidData = question && cards && cards.length === 3
 
+  // 状态机
+  const [status, setStatus] = useState('loading') // loading | error | ready
+  const [readingData, setReadingData] = useState(null) // 结构化解读数据
+  const [readingRawText, setReadingRawText] = useState('') // 保留原始文本用于分享卡片
+  const [errorMessage, setErrorMessage] = useState('')
+  const [saved, setSaved] = useState(false)
+  const [shareImage, setShareImage] = useState(null)
+  const [isGeneratingShare, setIsGeneratingShare] = useState(false)
+  const hasStartedRef = useRef(false)
+  const readingRef = useRef('')
+  const posterRef = useRef(null)
+
   // ===== 合并海报所需牌数据（picks 的 image + AI 的 keyword）=====
   const posterCards = useMemo(() => {
     if (!cards || !readingData?.cards) return cards || []
@@ -67,18 +79,6 @@ export default function ReadingPage() {
   const shareNarrative = useMemo(() => {
     return readingData?.shareNarrative || null
   }, [readingData])
-
-  // 状态机
-  const [status, setStatus] = useState('loading') // loading | error | ready
-  const [readingData, setReadingData] = useState(null) // 结构化解读数据
-  const [readingRawText, setReadingRawText] = useState('') // 保留原始文本用于分享卡片
-  const [errorMessage, setErrorMessage] = useState('')
-  const [saved, setSaved] = useState(false)
-  const [shareImage, setShareImage] = useState(null)
-  const [isGeneratingShare, setIsGeneratingShare] = useState(false)
-  const hasStartedRef = useRef(false)
-  const readingRef = useRef('')
-  const posterRef = useRef(null)
 
   useEffect(() => {
     if (hasStartedRef.current) return
