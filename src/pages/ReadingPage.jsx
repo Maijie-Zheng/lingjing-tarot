@@ -1,16 +1,14 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { createRoot } from 'react-dom/client'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Upload, Check, BookOpen, Home, Moon } from 'lucide-react'
 import LoadingSpinner from '../components/LoadingSpinner'
 import ReadingText from '../components/ReadingText'
 import ShareOverlay from '../components/ShareOverlay'
-import SharePoster from '../components/SharePoster'
 import { getSystemPrompt, buildUserPrompt } from '../utils/promptBuilder'
 import { callDeepSeek } from '../utils/api'
 import { saveReading } from '../utils/storage'
-import { generateShareImage, downloadImage } from '../utils/shareImage'
+import { generateShareCanvas, canvasToDataURL, downloadImage } from '../utils/shareImage'
 import { parseReadingResponse } from '../utils/parseResponse'
 
 /** 检测是否微信浏览器 */
@@ -154,42 +152,24 @@ export default function ReadingPage() {
     navigate(`/shuffle?q=${encodeURIComponent(question)}`)
   }, [question, navigate])
 
-  // ===== 分享（P3-7 v0.9：createRoot + html-to-image 导出）=====
+  // ===== 分享（P3-7 v0.9：Canvas 绘制，内容改用 shareQuote + shareNarrative）=====
   const handleShare = useCallback(async () => {
-    // 1) 创建离屏容器（远离视口但保持正常渲染）
-    const container = document.createElement('div')
-    container.style.cssText =
-      'position:fixed;left:-9999px;top:0;width:375px;opacity:1;'
-    document.body.appendChild(container)
-
-    // 2) 渲染 SharePoster 到离屏容器
-    const root = createRoot(container)
-    root.render(
-      <SharePoster
-        question={question}
-        cards={posterCards}
-        shareQuote={shareQuote}
-        shareNarrative={shareNarrative}
-      />
-    )
-
-    // 3) 等 DOM 提交 + 资源（图片/字体/二维码 SVG）加载
-    await new Promise((r) => requestAnimationFrame(r))
-    await new Promise((r) => setTimeout(r, 500))
-
-    // 4) 截图
     try {
-      const posterEl = container.firstChild
-      if (!posterEl) throw new Error('海报 DOM 未就绪')
+      const canvas = await generateShareCanvas({
+        question,
+        cards: posterCards,
+        shareQuote,
+        shareNarrative,
+      })
+      const dataURL = canvasToDataURL(canvas)
 
-      const dataURL = await generateShareImage(posterEl)
-
-      // 5) 分流：微信弹窗 / Web Share API / 下载
+      // 微信浏览器 → 弹窗浮层
       if (isWeChat()) {
         setShareImage(dataURL)
         return
       }
 
+      // Web Share API
       if (navigator.share && navigator.canShare) {
         try {
           const blob = await (await fetch(dataURL)).blob()
@@ -205,7 +185,7 @@ export default function ReadingPage() {
             return
           }
         } catch (err) {
-          if (err.name === 'AbortError') return // 用户取消分享
+          if (err.name === 'AbortError') return
         }
       }
 
@@ -213,10 +193,6 @@ export default function ReadingPage() {
       downloadImage(dataURL)
     } catch (err) {
       console.error('海报生成失败:', err)
-    } finally {
-      // 6) 清理
-      root.unmount()
-      document.body.removeChild(container)
     }
   }, [question, posterCards, shareQuote, shareNarrative])
 
