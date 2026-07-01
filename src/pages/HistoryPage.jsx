@@ -186,13 +186,13 @@ export default function HistoryPage() {
                             ))
                           ) : (
                             <div
-                              className="w-9 h-13 rounded flex items-center justify-center text-xs"
+                              className="w-9 h-13 rounded flex items-center justify-center"
                               style={{
-                                background: 'rgba(255,255,255,0.05)',
+                                background: 'rgba(255,255,255,0.04)',
                                 border: '1px solid rgba(255,255,255,0.08)',
                               }}
                             >
-                              🃏
+                              <Moon size={16} strokeWidth={1.2} className="text-white/15" aria-hidden />
                             </div>
                           )}
                         </div>
