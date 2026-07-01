@@ -30,12 +30,12 @@ export default function ReadingLoadingPage() {
   const { question = '', picks } = location.state ?? {}
   const startedRef = useRef(false)
 
-  // ===== 最小接口：发起 AI 请求，拿到结果就跳解读页 =====
-  // TODO(后续单独实现完整状态机):
-  //   - 请求时机:建议在"选完第三张牌"时就发起,把结果/Promise 传进来,而非进本页才发
-  //   - 最短停留:结果再快也至少停留 ~1.5s,避免一闪而过失去仪式感
-  //   - 超时安抚:约 8s 未回 → 切换更耐心的文案
-  //   - 失败/超时(~30s):显示失败态 + 重试(重试只重发请求,不重新抽牌)
+  // ===== 发起 AI 请求，拿到结果就跳解读页 =====
+  // 当前实现：进入页面即发起请求，结果返回后跳转 ReadingPage
+  // 已知可优化点（非阻塞，后续迭代）:
+  //   - 最短停留：结果再快也至少停留 ~1.5s，避免一闪而过失去仪式感
+  //   - 超时安抚：约 8s 未回 → 切换更耐心的文案
+  //   - 失败态增强：显示具体失败原因 + 重试按钮（重试只重发请求，不重新抽牌）
   useEffect(() => {
     if (startedRef.current) return
     startedRef.current = true

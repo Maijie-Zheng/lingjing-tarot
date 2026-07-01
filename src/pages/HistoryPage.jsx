@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
+import { Moon, Sparkles } from 'lucide-react'
 import useHistory from '../hooks/useHistory'
 import TarotCard from '../components/TarotCard'
 import ReadingText from '../components/ReadingText'
@@ -90,13 +91,12 @@ export default function HistoryPage() {
       {/* ===== 空状态 ===== */}
       {!loading && isEmpty && (
         <div className="flex-1 flex flex-col items-center justify-center gap-6 -mt-12">
-          <motion.span
-            className="text-6xl"
+          <motion.div
             animate={{ opacity: [0.5, 1, 0.5] }}
             transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
           >
-            🌙
-          </motion.span>
+            <Moon size={48} strokeWidth={1.2} className="text-white/20" aria-hidden />
+          </motion.div>
           <div className="text-center">
             <p className="text-white/50 text-lg">还没有解读记录</p>
             <p className="text-white/25 text-sm mt-2 leading-relaxed">
@@ -105,8 +105,9 @@ export default function HistoryPage() {
               都是一次与内心的对话。
             </p>
           </div>
-          <Link to="/" className="btn-gold">
-            ✨ 开始第一次抽牌
+          <Link to="/" className="btn-gold flex items-center gap-1.5">
+            <Sparkles size={16} strokeWidth={1.6} aria-hidden />
+            开始第一次抽牌
           </Link>
         </div>
       )}

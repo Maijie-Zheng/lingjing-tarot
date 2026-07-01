@@ -17,6 +17,8 @@ import { SHARE_URL } from '../lib/constants'
 const WIDTH = 750
 const HEIGHT = 1334
 const PADDING = 48
+const CARD_WIDTH = 146
+const CARD_HEIGHT = 219
 
 // ===== 位置标签 =====
 const POS_LABEL = { past: '过去', present: '现在', future: '未来' }
@@ -208,7 +210,7 @@ export async function generateShareCanvas({ question, cards, shareQuote, shareNa
   // ========================================
   // ===== 3. 品牌头 =====
   // ========================================
-  let y = 80
+  let y = 72
 
   ctx.fillStyle = '#c9a96e'
   ctx.font = 'bold 48px "Noto Serif SC", serif'
@@ -219,36 +221,36 @@ export async function generateShareCanvas({ question, cards, shareQuote, shareNa
   ctx.shadowColor = 'transparent'
   ctx.shadowBlur = 0
 
-  y += 44
+  y += 40
   ctx.fillStyle = 'rgba(255,255,255,0.55)'
   ctx.font = '20px "PingFang SC", "Noto Sans SC", sans-serif'
   ctx.fillText('解锁灵境，让心事皆有回响', WIDTH / 2, y)
 
   // 分隔线
-  y += 30
+  y += 26
   drawGoldDivider(ctx, y)
 
   // ===== 4. 问题 =====
-  y += 50
+  y += 44
   ctx.fillStyle = 'rgba(255,255,255,0.3)'
   ctx.font = '17px "PingFang SC", sans-serif'
   ctx.fillText('关于', WIDTH / 2, y)
 
-  y += 36
+  y += 34
   ctx.fillStyle = 'rgba(255,255,255,0.88)'
   ctx.font = '24px "Noto Serif SC", serif'
-  const qText = question && question.length > 22
-    ? question.slice(0, 22) + '…'
+  const qText = question && question.length > 24
+    ? question.slice(0, 24) + '…'
     : (question || '')
   ctx.fillText('「' + qText + '」', WIDTH / 2, y)
 
   // ========================================
   // ===== 5. 三张牌 =====
   // ========================================
-  y += 62
-  const cardWidth = 130
-  const cardHeight = 195
-  const cardGap = 36
+  y += 52
+  const cardWidth = CARD_WIDTH
+  const cardHeight = CARD_HEIGHT
+  const cardGap = 30
   const totalCardsWidth = cardWidth * 3 + cardGap * 2
   const cardStartX = (WIDTH - totalCardsWidth) / 2
 
@@ -350,7 +352,7 @@ export async function generateShareCanvas({ question, cards, shareQuote, shareNa
   // ========================================
   // ===== 6. 关键词脉络 =====
   // ========================================
-  y += cardHeight + 80
+  y += cardHeight + 58
   const keywords = (cards || []).map((c) => c?.keyword).filter(Boolean)
   if (keywords.length > 0) {
     const keywordText = keywords.join(' · ')
@@ -358,22 +360,22 @@ export async function generateShareCanvas({ question, cards, shareQuote, shareNa
     ctx.font = '13px "PingFang SC", sans-serif'
     ctx.textAlign = 'center'
     ctx.fillText(keywordText, WIDTH / 2, y)
-    y += 28
+    y += 26
   }
 
   // ========================================
   // ===== 7. 金句（shareQuote）=====
   // ========================================
   if (shareQuote) {
-    y += 16
+    y += 14
     drawGoldDivider(ctx, y)
-    y += 36
+    y += 32
     ctx.fillStyle = '#F1DCA0'
     ctx.font = '18px/1.85 "Noto Serif SC", serif'
     ctx.textAlign = 'center'
     const quoteLines = wrapText(ctx, shareQuote, WIDTH - PADDING * 3)
     for (const line of quoteLines) {
-      if (y > HEIGHT - 280) break
+      if (y > HEIGHT - 200) break
       ctx.fillText(line, WIDTH / 2, y)
       y += 34
     }
@@ -383,13 +385,13 @@ export async function generateShareCanvas({ question, cards, shareQuote, shareNa
   // ===== 8. 浓缩叙事（shareNarrative）=====
   // ========================================
   if (shareNarrative) {
-    y += 12
+    y += 10
     ctx.fillStyle = 'rgba(255,255,255,0.72)'
     ctx.font = '14px/2.0 "PingFang SC", sans-serif'
     ctx.textAlign = 'center'
     const narrativeLines = wrapText(ctx, shareNarrative, WIDTH - PADDING * 2.5)
     for (const line of narrativeLines) {
-      if (y > HEIGHT - 230) break
+      if (y > HEIGHT - 160) break
       ctx.fillText(line, WIDTH / 2, y)
       y += 28
     }
@@ -398,7 +400,7 @@ export async function generateShareCanvas({ question, cards, shareQuote, shareNa
   // ========================================
   // ===== 9. 底部：分隔线 + 水印 + 二维码 =====
   // ========================================
-  const footerStartY = Math.max(y + 30, HEIGHT - 200)
+  const footerStartY = Math.max(y + 40, HEIGHT - 260)
 
   // 底部渐变遮罩
   const footerGrad = ctx.createLinearGradient(0, footerStartY - 60, 0, HEIGHT)
