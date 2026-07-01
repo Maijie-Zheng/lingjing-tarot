@@ -34,6 +34,7 @@ export default function useReading({ question, cards, preReading, preError }) {
 
   const hasStartedRef = useRef(false)
   const readingRef = useRef('')
+  const [readingId, setReadingId] = useState(null)
 
   // ===== 合并海报所需牌数据（picks 的 image + AI 的 keyword）=====
   const posterCards = useMemo(() => {
@@ -79,7 +80,8 @@ export default function useReading({ question, cards, preReading, preError }) {
       setStatus('ready')
 
       try {
-        saveReading({ question, cards, reading: parsed, suggestions: [] })
+        const record = saveReading({ question, cards, reading: parsed, suggestions: [] })
+        setReadingId(record?.id || null)
         setSaved(true)
       } catch { /* 保存失败不影响使用 */ }
       return
@@ -112,7 +114,8 @@ export default function useReading({ question, cards, preReading, preError }) {
         setStatus('ready')
 
         try {
-          saveReading({ question, cards, reading: parsed, suggestions: [] })
+          const record = saveReading({ question, cards, reading: parsed, suggestions: [] })
+          setReadingId(record?.id || null)
           setSaved(true)
         } catch { /* 保存失败不影响使用 */ }
       } catch (err) {
@@ -150,6 +153,7 @@ export default function useReading({ question, cards, preReading, preError }) {
     readingRawText,
     errorMessage,
     saved,
+    readingId,
     posterCards,
     shareQuote,
     shareNarrative,

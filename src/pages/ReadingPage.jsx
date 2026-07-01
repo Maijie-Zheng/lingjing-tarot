@@ -5,6 +5,7 @@ import { Upload, Check, BookOpen, Home, Moon } from 'lucide-react'
 import LoadingSpinner from '../components/LoadingSpinner'
 import ReadingText from '../components/ReadingText'
 import ShareOverlay from '../components/ShareOverlay'
+import ReadingFeedback from '../components/ReadingFeedback'
 import { generateShareCanvas, canvasToDataURL } from '../utils/shareImage'
 import useReading from '../hooks/useReading'
 
@@ -34,6 +35,7 @@ export default function ReadingPage() {
     readingData,
     errorMessage,
     saved,
+    readingId,
     posterCards,
     shareQuote,
     shareNarrative,
@@ -259,6 +261,11 @@ export default function ReadingPage() {
           )}
         </AnimatePresence>
       </div>
+
+      {/* ===== 用户反馈（Phase 5）===== */}
+      {status === 'ready' && readingId && (
+        <ReadingFeedback readingId={readingId} />
+      )}
 
       {/* ===== 底部操作按钮（P3-5 v0.6：去 emoji，改 lucide 图标）===== */}
       <AnimatePresence>

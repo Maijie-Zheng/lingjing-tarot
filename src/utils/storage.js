@@ -89,3 +89,45 @@ export function deleteReading(id) {
 export function clearAllReadings() {
   localStorage.removeItem(STORAGE_KEY)
 }
+
+// ===== 用户反馈 =====
+
+const FEEDBACK_KEY = 'lingjing_feedback'
+
+/**
+ * 保存反馈
+ * @param {string} readingId - 关联的解读记录 ID
+ * @param {object} feedback - { sentiment: 'touched' | 'neutral', note: string | null }
+ */
+export function saveFeedback(readingId, { sentiment, note = null }) {
+  const record = {
+    readingId,
+    sentiment,
+    note,
+    createdAt: new Date().toISOString(),
+  }
+
+  try {
+    const raw = localStorage.getItem(FEEDBACK_KEY)
+    const all = raw ? JSON.parse(raw) : []
+    all.push(record)
+    localStorage.setItem(FEEDBACK_KEY, JSON.stringify(all))
+    return record
+  } catch {
+    return null
+  }
+}
+
+/**
+ * 获取所有反馈
+ * @returns {Array}
+ */
+export function getAllFeedback() {
+  try {
+    const raw = localStorage.getItem(FEEDBACK_KEY)
+    if (!raw) return []
+    return JSON.parse(raw)
+  } catch {
+    return []
+  }
+}
