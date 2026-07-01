@@ -8,6 +8,25 @@ const DEEPSEEK_API_KEY = import.meta.env.VITE_DEEPSEEK_API_KEY || ''
 const TIMEOUT_MS = 20000 // 20 秒超时
 
 /**
+ * 将 HTTP 状态码映射为用户友好的中文错误文案
+ * 不让冷冰冰的状态码破坏塔罗仪式的沉浸感
+ */
+function friendlyErrorMessage(status) {
+  const map = {
+    400: '牌面信号有些模糊，换个问题试试看',
+    401: '灵境尚未完全开启，请检查 API Key 配置',
+    402: '灵境能量余额不足，请检查 API 账户余额',
+    403: '灵境之门暂时关闭，请检查 API Key 权限',
+    429: '解读的人太多了，牌灵需要缓一缓，稍等片刻再试',
+    500: '星空信号有些扰动，牌灵正在调整中',
+    502: '灵境与星空之间的通道暂时阻塞',
+    503: '灵境正在深度冥想中，请稍后再来',
+    504: '星空回响迟迟未至，请再试一次',
+  }
+  return map[status] || '牌面能量有点波动，请再试一次'
+}
+
+/**
  * 调用 DeepSeek Chat API
  * @param {string} systemPrompt - System Prompt
  * @param {string} userPrompt - User Prompt
@@ -46,7 +65,12 @@ export async function callDeepSeek(systemPrompt, userPrompt) {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}))
-      const message = errorData.error?.message || `API 返回错误 (${response.status})`
+      const rawMessage = errorData.error?.message || ''
+      // 如果 API 返回了可读的错误描述，优先用；否则用我们的友好文案
+      const isTechnicalMessage = /^(4\d{2}|5\d{2})$/.test(rawMessage) || rawMessage.startsWith('{')
+      const message = (!isTechnicalMessage && rawMessage)
+        ? rawMessage
+        : friendlyErrorMessage(response.status)
       throw new Error(message)
     }
 
