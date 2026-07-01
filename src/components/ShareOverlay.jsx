@@ -1,23 +1,28 @@
 import { motion, AnimatePresence } from 'framer-motion'
-import { Hand } from 'lucide-react'
+import { Hand, Download } from 'lucide-react'
+import { downloadImage } from '../utils/shareImage'
 
 /**
- * 分享卡片全屏浮层 —— P3-7 v0.9
+ * 分享卡片全屏浮层 —— P3-7 v0.9 → Phase 4
  *
- * 用于微信浏览器等不支持 Web Share API / 下载的环境。
- * 展示生成的分享卡片图片，引导用户长按保存。
- *
- * 改动（v0.9）：
- * - 去 emoji，手指图标改用 lucide Hand
- * - 按钮布局不重叠
- * - 模态背景全暗（bg-black/92）不透底层
+ * 两种模式：
+ * - wechat: 微信浏览器，引导长按保存
+ * - download: 非微信浏览器，预览卡片 + 下载按钮
  *
  * Props:
  * - visible: boolean
  * - imageDataURL: string — 海报 PNG Data URL
+ * - mode: 'wechat' | 'download' — 默认 'wechat'
  * - onClose: () => void
  */
-export default function ShareOverlay({ visible, imageDataURL, onClose }) {
+export default function ShareOverlay({ visible, imageDataURL, mode = 'wechat', onClose }) {
+  const isWechat = mode === 'wechat'
+
+  const handleDownload = (e) => {
+    e.stopPropagation()
+    downloadImage(imageDataURL)
+  }
+
   return (
     <AnimatePresence>
       {visible && imageDataURL && (
@@ -55,32 +60,56 @@ export default function ShareOverlay({ visible, imageDataURL, onClose }) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 }}
           >
-            <div className="flex items-center gap-2">
-              <Hand
-                size={18}
-                strokeWidth={1.5}
-                color="rgba(201,169,110,0.7)"
-                aria-hidden
-              />
-              <span className="text-white/75 text-sm">长按图片保存到相册</span>
-            </div>
-            <span className="text-white/25 text-xs">保存后可在微信/朋友圈分享</span>
+            {isWechat ? (
+              <>
+                <div className="flex items-center gap-2">
+                  <Hand
+                    size={18}
+                    strokeWidth={1.5}
+                    color="rgba(201,169,110,0.7)"
+                    aria-hidden
+                  />
+                  <span className="text-white/75 text-sm">长按图片保存到相册</span>
+                </div>
+                <span className="text-white/25 text-xs">保存后可在微信/朋友圈分享</span>
+              </>
+            ) : (
+              <span className="text-white/60 text-sm">预览分享卡片</span>
+            )}
           </motion.div>
 
-          {/* 关闭按钮（幽灵按钮，细描边） */}
-          <motion.button
-            className="text-white/45 text-sm px-8 py-2 rounded-full border transition-colors"
-            style={{ borderColor: 'rgba(255,255,255,0.18)' }}
-            whileTap={{ scale: 0.95 }}
+          {/* 底部按钮 */}
+          <motion.div
+            className="flex gap-3"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 0.6 }}
-            onClick={onClose}
+            transition={{ delay: 0.5 }}
           >
-            关闭
-          </motion.button>
+            {/* 下载按钮（仅 download 模式） */}
+            {!isWechat && (
+              <motion.button
+                className="text-mystic-deeper text-sm px-6 py-2.5 rounded-full font-medium flex items-center gap-2"
+                style={{ background: '#c9a96e' }}
+                whileTap={{ scale: 0.95 }}
+                onClick={handleDownload}
+              >
+                <Download size={16} strokeWidth={1.8} aria-hidden />
+                下载图片
+              </motion.button>
+            )}
 
-          {/* 占位 spacer 防止按钮与底部操作栏重叠 */}
+            {/* 关闭按钮 */}
+            <motion.button
+              className="text-white/45 text-sm px-8 py-2 rounded-full border transition-colors"
+              style={{ borderColor: 'rgba(255,255,255,0.18)' }}
+              whileTap={{ scale: 0.95 }}
+              onClick={onClose}
+            >
+              关闭
+            </motion.button>
+          </motion.div>
+
+          {/* 占位 spacer */}
           <div className="h-2" />
         </motion.div>
       )}

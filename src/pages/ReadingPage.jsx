@@ -5,7 +5,7 @@ import { Upload, Check, BookOpen, Home, Moon } from 'lucide-react'
 import LoadingSpinner from '../components/LoadingSpinner'
 import ReadingText from '../components/ReadingText'
 import ShareOverlay from '../components/ShareOverlay'
-import { generateShareCanvas, canvasToDataURL, downloadImage } from '../utils/shareImage'
+import { generateShareCanvas, canvasToDataURL } from '../utils/shareImage'
 import useReading from '../hooks/useReading'
 
 /** 检测是否微信浏览器 */
@@ -44,7 +44,7 @@ export default function ReadingPage() {
 
   const [shareImage, setShareImage] = useState(null)
 
-  // ===== 分享（P3-7 v0.9：Canvas 绘制，内容改用 shareQuote + shareNarrative）=====
+  // ===== 分享 —— Phase 4: 非微信也先预览再下载 =====
   const handleShare = useCallback(async () => {
     try {
       const canvas = await generateShareCanvas({
@@ -55,19 +55,17 @@ export default function ReadingPage() {
       })
       const dataURL = canvasToDataURL(canvas)
 
-      // 微信浏览器 → 弹窗浮层
+      // 微信浏览器 → 弹窗浮层（长按保存模式）
       if (isWeChat()) {
-        setShareImage(dataURL)
+        setShareImage({ dataURL, mode: 'wechat' })
         return
       }
 
-      // Web Share API
+      // Web Share API（优先系统分享）
       if (navigator.share && navigator.canShare) {
         try {
           const blob = await (await fetch(dataURL)).blob()
-          const file = new File([blob], '灵境-塔罗解读.png', {
-            type: 'image/png',
-          })
+          const file = new File([blob], '灵境-塔罗解读.png', { type: 'image/png' })
           if (navigator.canShare({ files: [file] })) {
             await navigator.share({
               title: '灵境 · AI 塔罗解读',
@@ -81,8 +79,8 @@ export default function ReadingPage() {
         }
       }
 
-      // 降级：直接下载
-      downloadImage(dataURL)
+      // 降级：预览浮层（可预览 + 下载，不再直接下载）
+      setShareImage({ dataURL, mode: 'download' })
     } catch (err) {
       console.error('海报生成失败:', err)
     }
@@ -314,10 +312,11 @@ export default function ReadingPage() {
         )}
       </AnimatePresence>
 
-      {/* 微信分享浮层 */}
+      {/* 分享预览浮层（微信长按保存 / 通用预览下载） */}
       <ShareOverlay
         visible={!!shareImage}
-        imageDataURL={shareImage}
+        imageDataURL={shareImage?.dataURL}
+        mode={shareImage?.mode || 'wechat'}
         onClose={() => setShareImage(null)}
       />
     </div>
